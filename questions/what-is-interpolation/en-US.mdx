@@ -1,0 +1,90 @@
+---
+title: What is interpolation?
+---
+
+## TL;DR
+
+Interpolation is a one-way data binding technique in Angular that allows you to display data from your component class directly within your HTML template. It uses double curly braces `{{ }}` to embed expressions. Angular evaluates the expression inside the braces and converts the result to a string, which is then inserted into the HTML at that location. It's primarily used to display component property values, results of simple calculations, or function calls. Angular automatically sanitizes the output to prevent cross-site scripting (XSS) attacks.
+
+---
+
+## What is interpolation?
+
+Interpolation is a fundamental concept in Angular's template syntax. It's a form of one-way data binding that allows you to embed expressions directly into your HTML template. Angular evaluates these expressions and renders the result as text in the browser.
+
+### Syntax
+
+Interpolation uses the double curly braces `{{ }}` as delimiters. Any expression placed inside these braces is evaluated by Angular.
+
+```html
+<p>{{ expression }}</p>
+```
+
+### Purpose
+
+The primary purpose of interpolation is to display data from your component class in the template. It's a simple way to show dynamic content to the user.
+
+- **Displaying component properties:** You can display the value of a property defined in your component class.
+- **Evaluating expressions:** You can include simple JavaScript expressions, such as arithmetic operations, string concatenation, or calling component methods that return a value.
+- **One-way binding:** Data flows from the component to the template. When the component's data changes, the interpolated value in the template is automatically updated.
+
+### What can be used inside `{{ }}`?
+
+The expression inside the double curly braces can be:
+
+- A component property name (e.g., `{{ title }}`)
+- A method call that returns a value (e.g., `{{ getGreeting() }}`)
+- Simple arithmetic operations (e.g., `{{ price * quantity }}`)
+- String concatenation (e.g., `{{ 'Hello ' + name }}`)
+- Conditional (ternary) operators (e.g., `{{ isLoggedIn ? 'Welcome' : 'Please log in' }}`)
+- Accessing properties of objects or arrays (e.g., `{{ user.name }}`, `{{ items[0] }}`)
+
+Complex statements like `new`, `typeof`, assignment (`=`, `+=`, etc.), or chaining expressions with semicolons (`;`) are not allowed within interpolation expressions.
+
+### Example
+
+Consider a simple component:
+
+```typescript
+// app.component.ts
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-root',
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.css'],
+})
+export class AppComponent {
+  title = 'My Angular App';
+  user = { name: 'Alice', age: 30 };
+  price = 10;
+  quantity = 5;
+
+  getGreeting(): string {
+    return 'Hello from a method!';
+  }
+}
+```
+
+And its corresponding template:
+
+```html
+<!-- app.component.html -->
+<h1>{{ title }}</h1>
+<p>Welcome, {{ user.name }}! You are {{ user.age }} years old.</p>
+<p>Total cost: {{ price * quantity }}</p>
+<p>{{ getGreeting() }}</p>
+```
+
+In this example, `{{ title }}`, `{{ user.name }}`, `{{ user.age }}`, `{{ price * quantity }}`, and `{{ getGreeting() }}` are all examples of interpolation. Angular evaluates these expressions and displays the results in the HTML.
+
+### Security
+
+Angular automatically sanitizes interpolated values before displaying them in the browser. This means that if a component property contains HTML content, Angular will treat it as plain text and display it literally, rather than rendering it as HTML. This helps prevent cross-site scripting (XSS) vulnerabilities by ensuring that malicious scripts embedded in data are not executed.
+
+For example, if `title` was `<script>alert('XSS')</script>`, Angular would display the literal string `<script>alert('XSS')</script>` instead of executing the script. If you need to render trusted HTML, you would typically use property binding with the `[innerHTML]` attribute and Angular's `DomSanitizer` service.
+
+## Further reading
+
+- [Angular Documentation: Text Interpolation](https://angular.dev/guide/templates/interpolation)
+- [Angular Documentation: Security Guide (Sanitization)](https://angular.dev/guide/security#sanitization)

@@ -1,0 +1,147 @@
+---
+title: What is the purpose of `@Input` and `@Output` decorators?
+---
+
+## TL;DR
+
+`@Input` and `@Output` are decorators used in Angular for communication between parent and child components.
+
+- `@Input` allows a parent component to pass data _down_ to a child component. You declare a property in the child component with `@Input()` and the parent binds to it in its template.
+- `@Output` allows a child component to send data or notify the parent component about events happening _up_ to the parent. You declare a property in the child with `@Output()`, initialized as an `EventEmitter`, and the child calls `emit()` to send data. The parent listens to this output property using event binding syntax `()`.
+
+This pattern establishes a clear, unidirectional data flow (down) and event flow (up), making component interactions predictable and easier to manage.
+
+---
+
+## Component communication with `@Input` and `@Output`
+
+In Angular applications, components often need to interact with each other, especially in a parent-child relationship. The `@Input` and `@Output` decorators are the primary mechanisms provided by Angular to facilitate this communication in a structured and maintainable way. They enforce a clear direction of data flow.
+
+## The `@Input` decorator
+
+### Purpose of `@Input`
+
+The `@Input` decorator is used to define properties in a child component that can receive data from its parent component. It allows data to flow _down_ from the parent to the child.
+
+### How `@Input` works
+
+When you declare a property in a child component class with the `@Input()` decorator, you are making that property available for binding in the parent component's template. The parent component can then pass values to this property using property binding syntax `[]`.
+
+### `@Input` syntax and example
+
+Here's a simple example:
+
+**Child Component (`child.component.ts`)**
+
+```typescript
+import { Component, Input } from '@angular/core';
+
+@Component({
+  selector: 'app-child',
+  template: ` <p>Message from parent: {{ message }}</p> `,
+  standalone: true, // Available from Angular 15 onwards
+})
+export class ChildComponent {
+  @Input() message: string = ''; // Declare an input property
+}
+```
+
+**Parent Component (`parent.component.ts`)**
+
+```typescript
+import { Component } from '@angular/core';
+import { ChildComponent } from './child.component'; // Import the child component
+
+@Component({
+  selector: 'app-parent',
+  template: `
+    <h1>Parent Component</h1>
+    <app-child [message]="parentMessage"></app-child>
+    <!-- Bind to the child's input property -->
+  `,
+  standalone: true, // Available from Angular 15 onwards
+})
+export class ParentComponent {
+  parentMessage = 'Hello from the parent!';
+}
+```
+
+In this example, the `ParentComponent` passes the value of its `parentMessage` property to the `message` input property of the `ChildComponent`.
+
+## The `@Output` decorator
+
+### Purpose of `@Output`
+
+The `@Output` decorator is used to define properties in a child component that can emit events _up_ to its parent component. This allows the child to notify the parent about something that happened (like a button click or data change) and optionally send data along with the event.
+
+### How `@Output` works
+
+An `@Output` property is typically initialized as an `EventEmitter`. The child component calls the `emit()` method on this `EventEmitter` instance whenever it wants to send a notification or data to the parent. The parent component listens for these events using event binding syntax `()` on the child component's selector in its template.
+
+### `@Output` syntax and example
+
+Here's an example where the child component emits an event when a button is clicked:
+
+**Child Component (`child.component.ts`)**
+
+```typescript
+import { Component, Output, EventEmitter } from '@angular/core';
+
+@Component({
+  selector: 'app-child',
+  template: ` <button (click)="sendDataToParent()">Send Data Up</button> `,
+  standalone: true, // Available from Angular 15 onwards
+})
+export class ChildComponent {
+  // Declare an output property, initialized as an EventEmitter
+  @Output() dataEvent = new EventEmitter<string>();
+
+  sendDataToParent() {
+    // Emit the event with some data
+    this.dataEvent.emit('Data from child!');
+  }
+}
+```
+
+**Parent Component (`parent.component.ts`)**
+
+```typescript
+import { Component } from '@angular/core';
+import { ChildComponent } from './child.component'; // Import the child component
+
+@Component({
+  selector: 'app-parent',
+  template: `
+    <h1>Parent Component</h1>
+    <app-child (dataEvent)="handleChildData($event)"></app-child>
+    <!-- Listen for the child's output event -->
+    <p *ngIf="receivedData">Received from child: {{ receivedData }}</p>
+  `,
+  standalone: true, // Available from Angular 15 onwards
+})
+export class ParentComponent {
+  receivedData: string | undefined;
+
+  // Method to handle the event emitted by the child
+  handleChildData(data: string) {
+    this.receivedData = data;
+    console.log('Received data from child:', data);
+  }
+}
+```
+
+In this example, when the button in `ChildComponent` is clicked, it calls `emit()` on `dataEvent`, sending the string 'Data from child!'. The `ParentComponent` is listening for `(dataEvent)` and executes its `handleChildData()` method, receiving the emitted data via the `$event` variable.
+
+## Parent-child communication pattern
+
+The combination of `@Input` and `@Output` establishes a standard pattern for component interaction:
+
+- **Data flows down:** Parent passes data to child using `@Input`.
+- **Events flow up:** Child notifies parent about events or sends data using `@Output` and `EventEmitter`.
+
+This unidirectional data flow makes it easier to understand how data changes propagate through the application and simplifies debugging.
+
+## Further reading
+
+- [Angular documentation on Component Interaction](https://angular.dev/guide/components/inputs-outputs)
+- [Angular documentation on `EventEmitter`](https://angular.dev/api/core/EventEmitter)

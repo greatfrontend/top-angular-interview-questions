@@ -1,0 +1,140 @@
+---
+title: What are directives and what are its types?
+---
+
+## TL;DR
+
+Directives in Angular are classes that add behavior to elements in your application. They allow you to manipulate the DOM, change the appearance of elements, or modify their structure.
+
+There are three main types of directives:
+
+- **Component directives**: These are directives with a template. They are the most common type and are essentially custom HTML elements with associated logic and rendering.
+- **Structural directives**: These directives change the DOM layout by adding, removing, or manipulating elements. They are typically prefixed with an asterisk (`*`). Examples include `*ngIf`, `*ngFor`, and `*ngSwitch`.
+- **Attribute directives**: These directives change the appearance or behavior of an existing element, component, or another directive. They are applied as attributes to elements. Examples include `NgClass`, `NgStyle`, and custom attribute directives you create.
+
+---
+
+## What are directives?
+
+Directives are a fundamental concept in Angular. They are classes that instruct Angular how to transform the DOM (Document Object Model) when rendering your application. They allow you to attach behavior to elements, components, or other directives, enabling you to dynamically change their appearance, structure, or behavior based on your application's logic.
+
+Essentially, directives extend HTML with new attributes, elements, or classes, making it more powerful and dynamic.
+
+## Types of directives
+
+Angular has three main categories of directives:
+
+### Component directives
+
+Component directives are the most common type of directive. In fact, every component in Angular is technically a directive, but with a template. They combine logic (the component class), a template (HTML), and styling (CSS) to create reusable UI building blocks.
+
+When you create a component using the Angular CLI (`ng generate component my-component`), you are creating a component directive.
+
+```typescript
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-my-component', // This is the directive's selector
+  templateUrl: './my-component.component.html',
+  styleUrls: ['./my-component.component.css'],
+})
+export class MyComponent {
+  // Component logic
+}
+```
+
+You then use this component directive in your templates like a custom HTML element:
+
+```html
+<app-my-component></app-my-component>
+```
+
+### Structural directives
+
+Structural directives are responsible for shaping or reshaping the DOM's structure, typically by adding, removing, or manipulating elements. They are easy to identify because they are always prefixed with an asterisk (`*`). The asterisk is syntactic sugar for a more complex syntax involving `<ng-template>`.
+
+Common built-in structural directives include:
+
+- `*ngIf`: Conditionally adds or removes an element from the DOM based on a boolean expression.
+
+  ```html
+  <p *ngIf="isVisible">This paragraph is visible.</p>
+  ```
+
+- `*ngFor`: Repeats a block of HTML for each item in a collection.
+
+  ```html
+  <ul>
+    <li *ngFor="let item of items">{{ item }}</li>
+  </ul>
+  ```
+
+- `*ngSwitch`: Renders one of several possible elements based on a switch value. It works in conjunction with `ngSwitchCase` and `ngSwitchDefault`.
+
+  ```html
+  <div [ngSwitch]="status">
+    <p *ngSwitchCase="'loading'">Loading...</p>
+    <p *ngSwitchCase="'success'">Data loaded!</p>
+    <p *ngSwitchDefault>Unknown status.</p>
+  </div>
+  ```
+
+### Attribute directives
+
+Attribute directives change the appearance or behavior of an existing element, component, or another directive. They are applied as attributes to elements in your template. Unlike structural directives, they do not add or remove elements from the DOM; they only modify the element they are attached to.
+
+Angular provides several built-in attribute directives:
+
+- `NgClass`: Adds or removes CSS classes dynamically based on component properties.
+
+  ```html
+  <div [ngClass]="{'active': isActive, 'error': hasError}">Styled div</div>
+  ```
+
+- `NgStyle`: Adds or removes inline CSS styles dynamically based on component properties.
+
+  ```html
+  <div [ngStyle]="{'color': myColor, 'font-size': mySize + 'px'}">
+    Styled div
+  </div>
+  ```
+
+You can also create your own custom attribute directives to encapsulate reusable DOM manipulation logic. For example, a directive that changes the background color of an element on hover:
+
+```typescript
+import { Directive, ElementRef, HostListener, Input } from '@angular/core';
+
+@Directive({
+  selector: '[appHighlight]', // Applied as an attribute: <p appHighlight>...</p>
+})
+export class HighlightDirective {
+  @Input('appHighlight') highlightColor = 'yellow'; // Input alias matches selector
+
+  constructor(private el: ElementRef) {}
+
+  @HostListener('mouseenter') onMouseEnter() {
+    this.highlight(this.highlightColor);
+  }
+
+  @HostListener('mouseleave') onMouseLeave() {
+    this.highlight(''); // Remove highlight
+  }
+
+  private highlight(color: string) {
+    this.el.nativeElement.style.backgroundColor = color;
+  }
+}
+```
+
+This custom directive can then be used like this:
+
+```html
+<p appHighlight="cyan">This text will be highlighted cyan on hover.</p>
+<p appHighlight>This text will be highlighted yellow (default) on hover.</p>
+```
+
+## Further reading
+
+- [Angular Documentation: Attribute Directives](https://angular.dev/guide/directives/attribute-directives)
+- [Angular Documentation: Structural Directives](https://angular.dev/guide/directives/structural-directives)
+- [Angular Documentation: Components (which are directives with templates)](https://angular.dev/guide/components)

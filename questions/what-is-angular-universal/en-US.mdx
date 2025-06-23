@@ -1,0 +1,97 @@
+---
+title: What is Angular Universal?
+---
+
+## TL;DR
+
+Angular Universal is the official Angular project that enables **server-side rendering (SSR)** for Angular applications. Instead of the browser downloading your entire Angular application and then rendering the initial view, Universal runs your Angular app on a server (typically Node.js) to generate static HTML for the initial page load.
+
+The main benefits are:
+
+- **Improved SEO:** Search engine crawlers can easily index the fully rendered HTML content
+- **Faster perceived performance:** Users see content sooner because the initial HTML is delivered directly, even before the full JavaScript bundle loads and bootstraps
+- **Better performance on low-power devices:** The heavy lifting of initial rendering is done on the server
+
+After the initial HTML is delivered and displayed, the browser downloads the full Angular application, and it "bootstraps" over the server-rendered HTML, turning the static page into a fully interactive single-page application (SPA). This process is called **hydration** (available from Angular 16 onwards).
+
+---
+
+## What is Angular Universal
+
+Angular Universal is the official solution provided by the Angular team to implement server-side rendering (SSR) for Angular applications. Traditionally, Angular applications are single-page applications (SPAs) that render entirely in the browser (client-side rendering). This means the browser downloads a minimal HTML file, and then JavaScript is executed to fetch data, build the DOM, and render the user interface. Angular Universal changes this by allowing the Angular application to be executed on a server, generating the initial HTML content before sending it to the browser.
+
+## Why use Angular Universal
+
+Using Angular Universal addresses several common challenges associated with client-side rendered SPAs:
+
+### Search engine optimization (SEO)
+
+Many search engine crawlers and social media bots have difficulty fully executing JavaScript to see the complete content of a page. With client-side rendering, the initial HTML might be largely empty, containing only script tags. Angular Universal renders the full page content on the server, providing crawlers with complete, static HTML that is easily indexed, significantly improving SEO.
+
+### Improved perceived performance
+
+For users, the time it takes to see meaningful content on the screen is crucial. In a client-side rendered app, the user sees a blank page or a loading spinner until the JavaScript is downloaded, parsed, and executed. With Angular Universal, the server sends fully rendered HTML, so the user sees the content almost immediately, leading to a much faster perceived load time, especially on slower networks or devices.
+
+### Better performance on low-power devices
+
+Rendering complex applications client-side can be computationally expensive for the user's device. By performing the initial rendering on the server, Angular Universal offloads this work, resulting in a smoother experience for users on less powerful computers or mobile devices.
+
+### Enhanced accessibility for bots and crawlers
+
+Beyond search engines, other services like social media platforms generating link previews rely on scraping page content. Server-side rendering ensures these services can access the necessary metadata and content from the static HTML.
+
+## How Angular Universal works
+
+The core process of Angular Universal involves rendering the application on the server and then transitioning control to the client:
+
+### Server-side rendering
+
+When a user requests a page, the server intercepts the request. Instead of serving a static HTML file, the server runs the Angular application using a server-side platform (typically Node.js). The application renders the requested route, fetches any necessary data (often synchronously or using techniques compatible with SSR), and generates the complete HTML output for that specific view.
+
+### Sending HTML to the browser
+
+The server sends the generated HTML back to the user's browser. The browser can immediately parse and display this HTML, allowing the user to see the content quickly.
+
+### Client-side bootstrapping and hydration
+
+While the user is viewing the initial HTML, the browser downloads the full Angular application's JavaScript bundle in the background. Once downloaded, the Angular application bootstraps in the browser. Available from Angular 16 onwards, the application uses a process called **hydration**. Hydration reuses the DOM structure rendered by the server and attaches event listeners and application state, effectively turning the static HTML into a fully interactive Angular application without destroying and rebuilding the DOM. Before Angular 16, the client-side app would typically re-render the view, which could cause a brief flicker.
+
+## Key concepts and components
+
+Implementing Angular Universal involves setting up a server environment and modifying the Angular application structure:
+
+### Server-side app module
+
+You typically create a separate application module (`AppServerModule`) that bootstraps the application for the server environment. This module imports `ServerModule` from `@angular/platform-server`.
+
+### Browser app module
+
+The standard `AppModule` is used for the client-side bootstrap and imports `BrowserModule` from `@angular/platform-browser`.
+
+### State transfer
+
+Mechanisms like `TransferState` are used to transfer data fetched on the server to the client. This prevents the client from refetching the same data immediately after bootstrapping, improving performance.
+
+### Server environment
+
+You need a server (like Node.js with Express.js or similar frameworks) capable of running the Angular application code and handling incoming requests.
+
+## Benefits of Angular Universal
+
+- **Improved SEO and discoverability**
+- **Faster initial page load and perceived performance**
+- **Better user experience on slower devices and networks**
+- **Enhanced support for web crawlers and bots**
+
+## Drawbacks and considerations
+
+- **Increased complexity:** Setting up and maintaining an SSR application is more complex than a purely client-side one
+- **Server costs:** Running the application on the server requires server resources, which incurs costs
+- **Limited browser APIs:** Code running on the server does not have access to browser-specific APIs like `window`, `document`, or `localStorage`. You need to write platform-agnostic code or use abstractions.
+- **Build process:** The build process becomes more involved, requiring separate builds for the server and client.
+
+## Further reading
+
+- [Angular Universal Guide](https://angular.dev/guide/ssr)
+- [Hydration Guide (Angular 16+)](https://angular.dev/guide/hydration)
+- [ng add @angular/ssr](https://angular.dev/tools/cli/ssr)

@@ -1,0 +1,146 @@
+---
+title: How do you write a custom pipe?
+---
+
+## TL;DR
+
+A custom pipe in Angular allows you to transform data within your templates. To create one, you typically use the Angular CLI command `ng generate pipe <pipe-name>`. This creates a class decorated with `@Pipe`, which requires a `name` property used in templates. The class must implement the `PipeTransform` interface, which mandates a `transform` method. This method takes the input `value` and optional `args` and returns the transformed output.
+
+```typescript
+import { Pipe, PipeTransform } from '@angular/core';
+
+@Pipe({
+  name: 'myCustomPipe', // Used in templates like {{ data | myCustomPipe }}
+})
+export class MyCustomPipe implements PipeTransform {
+  transform(value: any, ...args: any[]): any {
+    // Your transformation logic here
+    return transformedValue;
+  }
+}
+```
+
+Once created, you use it in your template like `{{ data | myCustomPipe:arg1:arg2 }}`.
+
+---
+
+## What is a custom pipe?
+
+A custom pipe in Angular is a class that you create to transform data directly within your templates. Pipes are a convenient way to format, filter, or manipulate data before displaying it to the user, without needing to add logic to your component class. Angular provides built-in pipes like `DatePipe`, `CurrencyPipe`, and `JsonPipe`, but you can create your own for specific transformation needs.
+
+## Steps to create a custom pipe
+
+Creating a custom pipe involves defining a class that implements the `PipeTransform` interface and is decorated with the `@Pipe` decorator.
+
+### Generate the pipe
+
+The easiest way to create a pipe is by using the Angular CLI:
+
+```bash
+ng generate pipe my-custom-pipe
+```
+
+This command will create the pipe class file (`my-custom-pipe.pipe.ts`), a spec file for testing (`my-custom-pipe.pipe.spec.ts`), and automatically declare the pipe in the nearest Angular module (usually `app.module.ts`).
+
+### Understand the `@Pipe` decorator
+
+The `@Pipe` decorator is applied to the pipe class and requires a `name` property. This `name` is the string you will use in your templates to invoke the pipe.
+
+```typescript
+import { Pipe, PipeTransform } from '@angular/core';
+
+@Pipe({
+  name: 'myCustomPipe', // This is the name used in templates
+})
+export class MyCustomPipe implements PipeTransform {
+  // ... pipe logic
+}
+```
+
+### Implement the `PipeTransform` interface
+
+Your pipe class must implement the `PipeTransform` interface from `@angular/core`. This interface requires you to define a `transform` method.
+
+```typescript
+import { Pipe, PipeTransform } from '@angular/core';
+
+@Pipe({
+  name: 'myCustomPipe',
+})
+export class MyCustomPipe implements PipeTransform {
+  // transform method is required by PipeTransform
+  transform(value: any, ...args: any[]): any {
+    // Transformation logic goes here
+    return value; // Return the transformed value
+  }
+}
+```
+
+### Define the `transform` method
+
+The `transform` method is where your pipe's logic resides. It takes the input `value` (the data being piped) as its first argument. Subsequent arguments (`...args`) are optional and represent any parameters passed to the pipe in the template. The method should return the transformed value.
+
+Let's create a simple pipe that reverses a string:
+
+```typescript
+import { Pipe, PipeTransform } from '@angular/core';
+
+@Pipe({
+  name: 'reverseString',
+})
+export class ReverseStringPipe implements PipeTransform {
+  transform(value: string): string {
+    if (!value) {
+      return '';
+    }
+    return value.split('').reverse().join('');
+  }
+}
+```
+
+In this example, the `transform` method expects a `string` value and returns a `string`. It checks if the input is valid before reversing it.
+
+## How to use a custom pipe
+
+Once the pipe is created and declared in an Angular module, you can use it in any template associated with a component declared in that module (or imported module). You use the pipe operator (`|`) followed by the pipe's `name`.
+
+Using the `reverseString` pipe:
+
+```html
+<p>Original: {{ 'Hello Angular' }}</p>
+<p>Reversed: {{ 'Hello Angular' | reverseString }}</p>
+```
+
+If your pipe accepts arguments, you pass them after the pipe name, separated by colons:
+
+```html
+<!-- Assuming a pipe named 'formatNumber' that takes a decimal places argument -->
+<p>Formatted: {{ 123.45678 | formatNumber:2 }}</p>
+```
+
+The arguments `2` would be received in the `...args` array within the `transform` method of the `formatNumber` pipe.
+
+## Pure vs impure pipes
+
+By default, pipes are _pure_. A pure pipe's `transform` method is only executed when its input value or parameters change. This is efficient.
+
+An _impure_ pipe's `transform` method is executed during every component change detection cycle, regardless of whether the input value or parameters have changed. This can impact performance and should be used cautiously.
+
+To make a pipe impure, you set the `pure` property in the `@Pipe` decorator to `false`:
+
+```typescript
+@Pipe({
+  name: 'myImpurePipe',
+  pure: false, // Makes this an impure pipe
+})
+export class MyImpurePipe implements PipeTransform {
+  // ...
+}
+```
+
+Most custom pipes should be pure unless you have a specific reason (like needing to react to changes within an object or array without the reference itself changing).
+
+## Further reading
+
+- [Angular Documentation: Pipes](https://angular.dev/guide/pipes)
+- [Angular Documentation: Creating custom pipes](https://angular.dev/guide/pipes/custom-pipes)

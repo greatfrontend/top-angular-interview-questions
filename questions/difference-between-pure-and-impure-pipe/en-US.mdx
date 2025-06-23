@@ -1,0 +1,204 @@
+---
+title: What is the difference between pure and impure pipe?
+---
+
+## TL;DR
+
+In Angular, pipes transform data in templates. By default, pipes are **pure**.
+
+- **Pure pipes** are memoized. They only re-run their `transform` method when their input value changes (for primitives like strings, numbers, booleans) or when the input object _reference_ changes (for objects like arrays, objects, dates). They are efficient because they avoid unnecessary recalculations.
+- **Impure pipes** are _not_ memoized. They re-run their `transform` method during _every_ change detection cycle, regardless of whether the input value or reference has changed. This can be less performant but is necessary for transformations that depend on mutable data structures (like filtering or sorting an array in place) or asynchronous operations (like the `async` pipe).
+
+You make a pipe impure by setting `pure: false` in the `@Pipe` decorator:
+
+```typescript
+@Pipe({
+  name: 'myImpurePipe',
+  pure: false, // Makes the pipe impure
+})
+export class MyImpurePipe implements PipeTransform {
+  transform(value: any, ...args: any[]): any {
+    // Transformation logic
+    return transformedValue;
+  }
+}
+```
+
+Use pure pipes whenever possible for better performance. Use impure pipes only when the transformation logic requires checking for changes _within_ objects or relies on external state/asynchronous updates.
+
+---
+
+## Introduction to Angular Pipes
+
+Angular pipes are a way to transform data within your templates. They take an input value and return a transformed output value, which is then displayed in the view. Pipes are typically used for formatting data, such as dates, currencies, or text cases, or for filtering and sorting lists.
+
+You apply a pipe using the pipe operator (`|`) in template expressions:
+
+```html
+<p>{{ birthday | date }}</p>
+<p>{{ amount | currency }}</p>
+<p>{{ text | uppercase }}</p>
+```
+
+Angular provides several built-in pipes, and you can also create custom pipes.
+
+## Pure Pipes
+
+### Default Behavior
+
+By default, all custom pipes you create in Angular are **pure**. This is the most common and performant type of pipe.
+
+### How Pure Pipes Work
+
+A pure pipe is considered "pure" because its output depends _only_ on its input values. Angular optimizes pure pipes by memoizing their results. This means:
+
+- Angular executes the pipe's `transform` method only when it detects a **pure change** to the input value or parameters.
+- A pure change for a primitive input value (like `string`, `number`, `boolean`, `symbol`) is when the value itself changes.
+- A pure change for an object input value (like `Array`, `Object`, `Date`) is when the object _reference_ changes. If you modify properties _within_ an object or elements _within_ an array without changing the object's reference, a pure pipe will _not_ re-run.
+
+### Performance Benefits
+
+Because pure pipes only re-run when their inputs change, they are very efficient. Angular can skip executing the pipe's `transform` method during most change detection cycles, significantly reducing computation, especially in complex applications or lists.
+
+## Impure Pipes
+
+### How Impure Pipes Work
+
+An impure pipe is _not_ memoized. Angular executes an impure pipe's `transform` method during _every_ change detection cycle, regardless of whether the input value or parameters have changed.
+
+### When Impure Pipes Re-run
+
+Impure pipes re-run much more frequently than pure pipes. They are executed whenever:
+
+- An event occurs (like a button click, input change).
+- An HTTP request completes.
+- A timer fires (like `setTimeout`, `setInterval`).
+- Any other asynchronous operation completes that triggers change detection.
+
+### Performance Implications
+
+Because impure pipes run on every change detection cycle, they can potentially impact application performance, especially if the transformation logic is complex or if the pipe is used frequently in templates (e.g., within `*ngFor` loops). They should be used judiciously.
+
+### How to Make a Pipe Impure
+
+To create an impure pipe, you must explicitly set the `pure` property to `false` in the `@Pipe` decorator:
+
+```typescript
+import { Pipe, PipeTransform } from '@angular/core';
+
+@Pipe({
+  name: 'myImpurePipe',
+  pure: false, // This makes the pipe impure
+})
+export class MyImpurePipe implements PipeTransform {
+  transform(value: any, ...args: any[]): any {
+    console.log('Impure pipe transform called'); // Will log on every change detection cycle
+    // Your transformation logic here
+    return value;
+  }
+}
+```
+
+### Examples of Impure Pipes
+
+A common example where an impure pipe might be necessary is when filtering or sorting an array _in place_. If you modify the array without creating a new reference, a pure pipe wouldn't detect the change. An impure pipe would re-run and update the view.
+
+The built-in `AsyncPipe` is another example of an impure pipe. It subscribes to an observable or promise and returns the latest value it has emitted. It needs to run on every change detection cycle to check if a new value has arrived from the asynchronous source.
+
+## When to Use Pure vs Impure Pipes
+
+- **Use Pure Pipes:** This is the default and preferred approach. Use pure pipes for transformations that depend only on the input value and parameters, such as formatting dates, currencies, text, or transforming immutable data.
+- **Use Impure Pipes:** Use impure pipes only when necessary, typically for:
+  - Transformations that need to detect changes _within_ mutable objects (like adding/removing items from an array without changing the array reference).
+  - Transformations involving asynchronous operations (like the `async` pipe).
+  - Transformations that depend on external state that changes independently of the input value.
+
+Always consider the performance implications before using an impure pipe. If possible, restructure your data or logic to allow the use of a pure pipe (e.g., create a new array reference when filtering or sorting).
+
+## Code Examples
+
+Let's illustrate with a simple example.
+
+**Pure Pipe (Default):**
+
+```typescript
+// src/app/pipes/append-text.pipe.ts
+import { Pipe, PipeTransform } from '@angular/core';
+
+@Pipe({
+  name: 'appendText',
+  // pure: true // This is the default, no need to specify
+})
+export class AppendTextPipe implements PipeTransform {
+  transform(value: string, textToAppend: string): string {
+    console.log('Pure pipe transform called');
+    return value + textToAppend;
+  }
+}
+```
+
+**Impure Pipe:**
+
+```typescript
+// src/app/pipes/append-text-impure.pipe.ts
+import { Pipe, PipeTransform } from '@angular/core';
+
+@Pipe({
+  name: 'appendTextImpure',
+  pure: false, // Explicitly set to false
+})
+export class AppendTextImpurePipe implements PipeTransform {
+  transform(value: string, textToAppend: string): string {
+    console.log('Impure pipe transform called');
+    return value + textToAppend;
+  }
+}
+```
+
+**Usage in Component Template:**
+
+```html
+<!-- src/app/app.component.html -->
+<input [(ngModel)]="message" />
+<button (click)="triggerChangeDetection()">Trigger CD</button>
+
+<h3>Pure Pipe:</h3>
+<p>{{ message | appendText: ' (pure)' }}</p>
+
+<h3>Impure Pipe:</h3>
+<p>{{ message | appendTextImpure: ' (impure)' }}</p>
+```
+
+**Component Logic:**
+
+```typescript
+// src/app/app.component.ts
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-root',
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.css'],
+})
+export class AppComponent {
+  message = 'Hello';
+
+  triggerChangeDetection() {
+    // This method does nothing but triggers a change detection cycle
+    console.log('Button clicked, triggering change detection');
+  }
+}
+```
+
+When you run this example:
+
+1.  Initially, both pipe `transform` methods are called once.
+2.  If you type in the input field, the `message` variable changes. Both pipes' `transform` methods are called again because their input (`message`) has changed.
+3.  If you click the "Trigger CD" button, the `message` variable does _not_ change. The pure pipe's `transform` method is _not_ called again. The impure pipe's `transform` method _is_ called again because it runs on every change detection cycle.
+
+This demonstrates the difference in how frequently pure and impure pipes are executed.
+
+## Further reading
+
+- [Angular Documentation: Pipes](https://angular.dev/guide/pipes)
+- [Angular Documentation: Pure and impure pipes](https://angular.dev/guide/pipes/pure-and-impure-pipes)

@@ -1,0 +1,138 @@
+---
+title: What is property binding? How is it different from event binding?
+---
+
+## TL;DR
+
+Property binding in Angular allows you to set the value of a target element's property using a component's property value. The data flow is one-way, from the component class to the DOM element or directive property. You use square brackets `[]` around the target property name, like `[src]="imageUrl"`.
+
+Event binding, on the other hand, lets you listen for events dispatched by a target element (like a button click or input change) and execute a method in your component class when that event occurs. The data flow is from the DOM element to the component. You use parentheses `()` around the target event name, like `(click)="saveData()"`.
+
+The main difference is the direction of data flow: property binding sends data _to_ the element, while event binding receives notifications _from_ the element.
+
+---
+
+## What is property binding?
+
+Property binding is a technique in Angular that allows you to set the value of a target HTML element's property or a directive's `@Input()` property using a value from your component class. It establishes a one-way data flow from the component to the view (the DOM).
+
+### Purpose of property binding
+
+The primary purpose is to dynamically update the properties of DOM elements or Angular components/directives based on the state of your component class. This includes setting attributes like `src`, `href`, `alt`, `disabled`, `value`, or passing data to child components via their input properties.
+
+### Syntax for property binding
+
+The syntax involves enclosing the target element property name in square brackets `[]` on the left side of the assignment, and the component property or expression on the right side:
+
+```html
+<img [src]="product.imageUrl" [alt]="product.name" />
+<button [disabled]="isSaving">Save</button>
+<app-child [data]="parentData"></app-child>
+```
+
+Angular evaluates the expression inside the quotes (`product.imageUrl`, `isSaving`, `parentData`) and sets the corresponding property of the element or directive.
+
+### Example of property binding
+
+Consider a component with a property `isButtonDisabled`. You can bind this property to the `disabled` property of a button:
+
+```typescript
+// app.component.ts
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-root',
+  template: `
+    <button [disabled]="isButtonDisabled">Click Me</button>
+    <p>Button is {{ isButtonDisabled ? 'disabled' : 'enabled' }}</p>
+  `,
+})
+export class AppComponent {
+  isButtonDisabled = true;
+
+  // Method to toggle the state (optional, for demonstration)
+  toggleButtonState() {
+    this.isButtonDisabled = !this.isButtonDisabled;
+  }
+}
+```
+
+When `isButtonDisabled` is `true`, the button will be disabled. When it's `false`, the button will be enabled.
+
+## What is event binding?
+
+Event binding in Angular allows you to listen for specific events (like clicks, keypresses, mouseovers, form submissions) on DOM elements or Angular components/directives and execute a method in your component class when that event occurs. It establishes a one-way data flow from the view (the DOM) to the component.
+
+### Purpose of event binding
+
+The main purpose is to react to user interactions or other events happening in the view and update the component's state or trigger actions accordingly.
+
+### Syntax for event binding
+
+The syntax involves enclosing the target event name in parentheses `()` on the left side of the assignment, and a component method call or statement on the right side:
+
+```html
+<button (click)="saveData()">Save</button>
+<input (input)="onInputChange($event)" />
+<form (submit)="onSubmit($event)">Submit</form>
+<app-child (outputEvent)="handleOutput($event)"></app-child>
+```
+
+When the specified event occurs (e.g., the button is clicked), Angular executes the statement or method call inside the quotes (`saveData()`, `onInputChange($event)`, `onSubmit($event)`, `handleOutput($event)`). The `$event` variable often contains information about the event, such as input values or emitted data from an `@Output()`.
+
+### Example of event binding
+
+Consider a button that, when clicked, calls a method `incrementCount` in your component:
+
+```typescript
+// app.component.ts
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-root',
+  template: `
+    <button (click)="incrementCount()">Increment</button>
+    <p>Count: {{ clickCount }}</p>
+  `,
+})
+export class AppComponent {
+  clickCount = 0;
+
+  incrementCount() {
+    this.clickCount++;
+  }
+}
+```
+
+Each time the button is clicked, the `incrementCount` method is executed, updating the `clickCount` property, which is then displayed in the paragraph via interpolation.
+
+## How is property binding different from event binding?
+
+The key differences lie in their purpose, syntax, and the direction of data flow:
+
+### Purpose
+
+- **Property Binding:** Used to set or update the properties of a DOM element or directive based on component data. It's about _displaying_ data or configuring elements.
+- **Event Binding:** Used to listen for events triggered by a DOM element or directive and execute component logic in response. It's about _reacting_ to user actions or view events.
+
+### Syntax
+
+- **Property Binding:** Uses square brackets `[]` around the target property name: `[property]="componentProperty"`.
+- **Event Binding:** Uses parentheses `()` around the target event name: `(event)="componentMethod()"`.
+
+### Data Flow
+
+- **Property Binding:** One-way data flow from the component class _to_ the view (DOM/directive property).
+- **Event Binding:** One-way data flow from the view (DOM event) _to_ the component class (method execution).
+
+### Analogy
+
+Think of property binding like setting the initial state or configuration of a device (e.g., setting the volume level on a speaker). Think of event binding like the device sending a signal back when something happens (e.g., the speaker sending a signal when a button is pressed).
+
+In summary, property binding pushes data _out_ to the view, while event binding pulls information or triggers actions _in_ from the view.
+
+## Further reading
+
+- [Angular Documentation: Property Binding](https://angular.io/guide/property-binding)
+- [Angular Documentation: Event Binding](https://angular.io/guide/event-binding)
+- [Angular Documentation: Binding syntax overview](https://angular.io/guide/binding-syntax)

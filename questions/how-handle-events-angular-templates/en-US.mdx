@@ -1,0 +1,219 @@
+---
+title: How do you handle events in Angular templates?
+---
+
+## TL;DR
+
+In Angular templates, you handle events using event binding syntax, which looks like `(eventName)="statement"`. The `eventName` is typically a standard DOM event like `click`, `input`, or `submit`, but it can also be a custom event emitted by a component using `@Output`. The `statement` is a template statement that Angular executes when the event occurs, usually involving calling a method defined in the component class. You can access the event payload using the `$event` variable within the statement.
+
+For example, to handle a button click:
+
+```html
+<button (click)="saveData()">Save</button>
+```
+
+To get the input value from an input field:
+
+```html
+<input (input)="onInput($event)" />
+```
+
+And in the component class:
+
+```typescript
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-my-component',
+  templateUrl: './my-component.html',
+})
+export class MyComponent {
+  saveData() {
+    console.log('Data saved!');
+  }
+
+  onInput(event: Event) {
+    const inputElement = event.target as HTMLInputElement;
+    console.log('Input value:', inputElement.value);
+  }
+}
+```
+
+---
+
+## Handling events in Angular templates
+
+Angular uses event binding to respond to user input or other events occurring in the DOM or emitted by components.
+
+### Event binding syntax
+
+The syntax for event binding is `(eventName)="statement"`.
+
+- `(eventName)`: This is the target event that the binding listens for. It can be a standard DOM event (like `click`, `input`, `submit`, `mouseover`, `keydown`) or a custom event emitted by an Angular component or directive using `@Output` and `EventEmitter`.
+- `"statement"`: This is the template statement that Angular executes when the `eventName` occurs. This statement can be a method call, an assignment, or a simple expression.
+
+### Common DOM events
+
+You can bind to most standard DOM events directly using their lowercase names.
+
+#### Click events
+
+Handling button clicks is a very common use case.
+
+```html
+<button (click)="onSubmit()">Submit Form</button>
+```
+
+In the component class:
+
+```typescript
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-form',
+  template: '<button (click)="onSubmit()">Submit Form</button>',
+})
+export class FormComponent {
+  onSubmit() {
+    console.log('Form submitted!');
+    // Perform submission logic
+  }
+}
+```
+
+#### Input events
+
+Responding to changes in input fields as the user types.
+
+```html
+<input type="text" (input)="onInputChange($event)" />
+```
+
+In the component class:
+
+```typescript
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-input-handler',
+  template: '<input type="text" (input)="onInputChange($event)">',
+})
+export class InputHandlerComponent {
+  onInputChange(event: Event) {
+    const inputElement = event.target as HTMLInputElement;
+    console.log('Current value:', inputElement.value);
+  }
+}
+```
+
+#### Form submission events
+
+Handling the `submit` event on a `<form>` element.
+
+```html
+<form (submit)="onFormSubmit($event)">
+  <input type="text" name="username" />
+  <button type="submit">Login</button>
+</form>
+```
+
+In the component class:
+
+```typescript
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-login-form',
+  templateUrl: './login-form.component.html',
+})
+export class LoginFormComponent {
+  onFormSubmit(event: Event) {
+    event.preventDefault(); // Prevent default browser form submission
+    console.log('Form submitted via Angular handler');
+    // Process form data
+  }
+}
+```
+
+### Accessing the event object (`$event`)
+
+Often, you need access to the event object itself to get information about the event, such as the input value, mouse coordinates, or key pressed. Angular provides the `$event` variable for this purpose.
+
+```html
+<input type="text" (keyup)="onKeyUp($event)" />
+```
+
+In the component class:
+
+```typescript
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-key-handler',
+  template: '<input type="text" (keyup)="onKeyUp($event)">',
+})
+export class KeyHandlerComponent {
+  onKeyUp(event: KeyboardEvent) {
+    console.log('Key pressed:', event.key);
+    console.log('Input value:', (event.target as HTMLInputElement).value);
+  }
+}
+```
+
+The type of `$event` depends on the target event. For DOM events, it's typically a standard DOM event object (like `MouseEvent`, `KeyboardEvent`, `Event`). For custom component events, the `$event` object is the data payload emitted by the `EventEmitter`.
+
+### Custom component events
+
+Components can expose custom events using the `@Output()` decorator and `EventEmitter`. Parent components can then listen to these custom events using the same event binding syntax.
+
+Child component (`child.component.ts`):
+
+```typescript
+import { Component, Output, EventEmitter } from '@angular/core';
+
+@Component({
+  selector: 'app-child',
+  template: '<button (click)="sendMessage()">Send Message to Parent</button>',
+})
+export class ChildComponent {
+  @Output() messageEvent = new EventEmitter<string>();
+
+  sendMessage() {
+    this.messageEvent.emit('Hello from child!');
+  }
+}
+```
+
+Parent component (`parent.component.html`):
+
+```html
+<app-child (messageEvent)="receiveMessage($event)"></app-child>
+<p>Received message: {{ receivedMessage }}</p>
+```
+
+Parent component (`parent.component.ts`):
+
+```typescript
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-parent',
+  templateUrl: './parent.component.html',
+})
+export class ParentComponent {
+  receivedMessage: string = '';
+
+  receiveMessage(message: string) {
+    this.receivedMessage = message;
+    console.log('Received message:', message);
+  }
+}
+```
+
+In this example, `messageEvent` is the custom event name, and `$event` in the parent template refers to the string payload emitted by the child's `EventEmitter`.
+
+## Further reading
+
+- [Angular Documentation: Event binding](https://angular.dev/guide/event-binding)
+- [Angular Documentation: Template statements](https://angular.dev/guide/template-syntax#template-statements)
+- [Angular Documentation: Component interaction (using @Output)](https://angular.dev/guide/components/inputs-outputs#output)

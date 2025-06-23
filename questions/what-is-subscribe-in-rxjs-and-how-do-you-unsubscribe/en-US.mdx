@@ -1,0 +1,237 @@
+---
+title: What is subscribe in RxJS? How do you unsubscribe?
+---
+
+## TL;DR
+
+In RxJS, `subscribe` is the method used to execute an `Observable` and start receiving values. An `Observable` is like a blueprint for a stream of data, but it doesn't do anything until you `subscribe` to it.
+
+When you call `subscribe`, you provide an `Observer` or callback functions (`next`, `error`, `complete`) to handle the emitted values, errors, or completion notifications. The `subscribe` method returns a `Subscription` object.
+
+It's crucial to **unsubscribe** from subscriptions when they are no longer needed, especially in Angular components when the component is destroyed. Failing to unsubscribe can lead to memory leaks and potential errors.
+
+Common ways to unsubscribe in Angular include:
+
+- **Manual Unsubscription:** Storing the `Subscription` object and calling `subscription.unsubscribe()` in the component's `ngOnDestroy` lifecycle hook.
+- **Using the `async` pipe:** This is the recommended approach for observables used directly in templates, as it automatically handles subscription and unsubscription.
+- **Using RxJS operators:** Operators like `takeUntil`, `take`, `first`, or `takeWhile` can complete the observable stream automatically under certain conditions, effectively ending the subscription. `takeUntil` combined with a subject triggered in `ngOnDestroy` is a common pattern.
+
+---
+
+## What is subscribe in RxJS?
+
+In RxJS, an `Observable` represents a stream of values over time, but it is lazy. This means that an `Observable` won't start emitting values or executing its logic until something subscribes to it. The `subscribe` method is the key to activating an `Observable`.
+
+### Connecting an Observer to an Observable
+
+The primary purpose of `subscribe` is to connect an `Observer` to an `Observable`. An `Observer` is an object with methods (`next`, `error`, `complete`) that define how to handle the values emitted by the `Observable`, any errors that occur, or when the `Observable` finishes.
+
+You can pass the `Observer` object directly to `subscribe`:
+
+```typescript
+observable.subscribe({
+  next: value => console.log('Received:', value),
+  error: err => console.error('Error:', err),
+  complete: () => console.log('Completed'),
+});
+```
+
+Alternatively, you can pass the callback functions directly as arguments (this is a common shorthand):
+
+```typescript
+observable.subscribe(
+  value => console.log('Received:', value), // next callback
+  err => console.error('Error:', err), // error callback
+  () => console.log('Completed') // complete callback
+);
+```
+
+The `next` callback is called for each value emitted by the `Observable`. The `error` callback is called if an error occurs, which typically terminates the `Observable`. The `complete` callback is called when the `Observable` finishes successfully, also terminating the `Observable`.
+
+### What `subscribe` returns
+
+The `subscribe` method returns a `Subscription` object. This object represents the ongoing execution of the `Observable`. The `Subscription` object has a crucial method: `unsubscribe()`.
+
+## Why is unsubscribing important?
+
+Unsubscribing is vital for managing resources and preventing memory leaks in applications, especially in component-based frameworks like Angular.
+
+### Preventing memory leaks
+
+When you subscribe to an `Observable`, the `Subscription` object maintains a connection to the `Observable`'s source (e.g., an HTTP request, a timer, a DOM event listener). If the component or service that created the subscription is destroyed or no longer needs the data, but the subscription is not closed, it can keep the source active and hold onto references to the component or service. This prevents the garbage collector from cleaning up those objects, leading to memory leaks.
+
+### Avoiding side effects on destroyed components
+
+If a subscription remains active after an Angular component is destroyed, the callbacks (`next`, `error`, `complete`) associated with that subscription might still execute. If these callbacks attempt to interact with the component's properties or DOM elements that no longer exist, it can lead to errors or unexpected behavior.
+
+## How do you unsubscribe?
+
+There are several strategies for unsubscribing from RxJS observables in Angular, ranging from manual methods to automatic ones.
+
+### Manual unsubscription
+
+This involves storing the `Subscription` object returned by `subscribe` and explicitly calling its `unsubscribe()` method when the subscription is no longer needed. In Angular components, the standard place to do this is within the `ngOnDestroy` lifecycle hook.
+
+```typescript
+import { Component, OnDestroy } from '@angular/core';
+import { Subscription, interval } from 'rxjs';
+
+@Component({
+  selector: 'app-timer',
+  template: '<p>Timer: {{ counter }}</p>',
+})
+export class TimerComponent implements OnDestroy {
+  private timerSubscription: Subscription;
+  counter = 0;
+
+  constructor() {
+    // Subscribe to an observable (e.g., an interval)
+    this.timerSubscription = interval(1000).subscribe(value => {
+      this.counter = value;
+    });
+  }
+
+  ngOnDestroy(): void {
+    // Manually unsubscribe when the component is destroyed
+    if (this.timerSubscription) {
+      this.timerSubscription.unsubscribe();
+      console.log('Timer subscription unsubscribed');
+    }
+  }
+}
+```
+
+For components with multiple subscriptions, you can store them in an array and loop through it in `ngOnDestroy` or use `Subscription.add()` to create a parent subscription that unsubscribes all children when the parent is unsubscribed.
+
+```typescript
+import { Component, OnDestroy } from '@angular/core';
+import { Subscription, interval, fromEvent } from 'rxjs';
+
+@Component({
+  selector: 'app-multiple-subs',
+  template: '<button id="myButton">Click me</button>',
+})
+export class MultipleSubsComponent implements OnDestroy {
+  private subscriptions = new Subscription(); // Create a parent subscription
+
+  constructor() {
+    // Add subscriptions to the parent
+    this.subscriptions.add(
+      interval(1000).subscribe(value => console.log('Interval:', value))
+    );
+
+    const button = document.getElementById('myButton');
+    if (button) {
+      this.subscriptions.add(
+        fromEvent(button, 'click').subscribe(() =>
+          console.log('Button clicked!')
+        )
+      );
+    }
+  }
+
+  ngOnDestroy(): void {
+    // Unsubscribe all added subscriptions
+    this.subscriptions.unsubscribe();
+    console.log('All subscriptions unsubscribed');
+  }
+}
+```
+
+### Using the `async` pipe
+
+The `async` pipe (`| async`) is a built-in Angular pipe that is specifically designed to handle observables (and promises) in component templates. It automatically subscribes to the observable when the component is initialized and automatically unsubscribes when the component is destroyed. This is the recommended approach for observables that are primarily consumed in the template.
+
+```typescript
+import { Component } from '@angular/core';
+import { Observable, interval, map } from 'rxjs';
+
+@Component({
+  selector: 'app-async-pipe',
+  template: `
+    <p>Timer: {{ timer$ | async }}</p>
+    <p *ngIf="data$ | async as data">Data loaded: {{ data }}</p>
+  `,
+})
+export class AsyncPipeComponent {
+  timer$: Observable<number> = interval(1000);
+  data$: Observable<string> = new Observable(observer => {
+    setTimeout(() => {
+      observer.next('Some data');
+      observer.complete();
+    }, 2000);
+  });
+
+  // No manual unsubscribe needed for timer$ or data$
+}
+```
+
+Using the `async` pipe simplifies component code by moving subscription management to the template and letting Angular handle it.
+
+### Using RxJS operators
+
+Certain RxJS operators can automatically complete an observable stream based on specific conditions. When an observable completes, its subscription is automatically closed.
+
+- **`take(count)`:** Completes the observable after emitting `count` values. Useful when you only need a fixed number of emissions.
+- **`first()`:** Completes the observable after the first value is emitted. Similar to `take(1)`.
+- **`takeWhile(predicate)`:** Emits values as long as the `predicate` function returns `true`, then completes.
+- **`takeUntil(notifier$)`:** Emits values until another observable (`notifier---
+  title: What is subscribe in RxJS? How do you unsubscribe?
+
+---
+
+) emits a value. This is a very common pattern in Angular components to unsubscribe when the component is destroyed.
+
+Here's an example using `takeUntil` with `ngOnDestroy`:
+
+```typescript
+import { Component, OnDestroy } from '@angular/core';
+import { interval, Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+
+@Component({
+  selector: 'app-take-until',
+  template: '<p>Timer: {{ counter }}</p>',
+})
+export class TakeUntilComponent implements OnDestroy {
+  private destroy$ = new Subject<void>(); // Create a subject to signal destruction
+  counter = 0;
+
+  constructor() {
+    interval(1000)
+      .pipe(takeUntil(this.destroy$)) // Use takeUntil with the destroy subject
+      .subscribe(value => {
+        this.counter = value;
+      });
+  }
+
+  ngOnDestroy(): void {
+    // Emit a value on the destroy subject to complete the interval observable
+    this.destroy$.next();
+    this.destroy$.complete(); // Optional: complete the subject itself
+    console.log('Interval observable completed via takeUntil');
+  }
+}
+```
+
+In this pattern, the `destroy---
+title: What is subscribe in RxJS? How do you unsubscribe?
+
+---
+
+subject acts as the `notifier---
+title: What is subscribe in RxJS? How do you unsubscribe?
+
+---
+
+. When `ngOnDestroy` is called, `destroy$.next()` emits a value, which causes the `takeUntil` operator to complete the source observable (`interval`), automatically unsubscribing.
+
+Choosing the right unsubscription strategy depends on the context: `async` pipe for templates, `takeUntil` for component logic subscriptions, and manual unsubscription or `Subscription.add()` for more complex scenarios or when operators aren't suitable.
+
+## Further reading
+
+- [RxJS `subscribe` documentation](https://rxjs.dev/api/index/class/Observable#subscribe)
+- [RxJS `Subscription` documentation](https://rxjs.dev/api/index/class/Subscription)
+- [Angular `AsyncPipe` documentation](https://angular.dev/api/common/AsyncPipe)
+- [RxJS `takeUntil` operator documentation](https://rxjs.dev/api/operators/takeUntil)
+- [RxJS `take` operator documentation](https://rxjs.dev/api/operators/take)

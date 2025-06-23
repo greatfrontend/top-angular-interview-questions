@@ -1,0 +1,165 @@
+---
+title: What are dynamic components and how do you create them?
+---
+
+## TL;DR
+
+Dynamic components in Angular are components that are not declared in your template but are loaded and rendered programmatically at runtime. You typically use them for scenarios like creating dashboards, modal dialogs, or tabs where the specific component to display isn't known until the application is running.
+
+To create and load a dynamic component:
+
+1.  Identify a location in your template where the dynamic component should be inserted. This is usually marked by an element that serves as an anchor point.
+2.  In your component class, get a reference to the `ViewContainerRef` associated with that anchor point. You can inject `ViewContainerRef` and query for elements using `@ViewChild` or `@ViewChildren`.
+3.  Call the `createComponent` method on the `ViewContainerRef`, passing the class of the component you want to create.
+
+```typescript
+import {
+  Component,
+  ViewChild,
+  ViewContainerRef,
+  AfterViewInit,
+} from '@angular/core';
+import { DynamicComponent } from './dynamic.component'; // The component to load dynamically
+
+@Component({
+  selector: 'app-host',
+  template: '<div #dynamicContainer></div>', // Anchor point
+})
+export class HostComponent implements AfterViewInit {
+  @ViewChild('dynamicContainer', { read: ViewContainerRef })
+  container!: ViewContainerRef;
+
+  ngAfterViewInit() {
+    // Clear previous components if any
+    this.container.clear();
+
+    // Create the component instance
+    const componentRef = this.container.createComponent(DynamicComponent);
+
+    // Optional: Interact with the component instance
+    componentRef.instance.someInput = 'Hello from host';
+    componentRef.instance.someOutput.subscribe(value => {
+      console.log('Output received:', value);
+    });
+  }
+}
+```
+
+Available from Angular 13 onwards, you no longer need `ComponentFactoryResolver` or to list components in `entryComponents` for this common use case.
+
+---
+
+## What are dynamic components?
+
+Dynamic components are Angular components that are not included in the application's template during the build process. Instead, they are instantiated and added to the DOM programmatically at runtime based on application logic or user interaction.
+
+### Why use dynamic components?
+
+You would typically use dynamic components in scenarios where:
+
+- The specific component to be rendered is not known until runtime (e.g., based on data fetched from an API, user configuration, or application state).
+- You need to create multiple instances of the same component dynamically (e.g., items in a list that can be added or removed).
+- You are building flexible layouts, dashboards, modal dialogs, or tab interfaces where content changes dynamically.
+- You are implementing plugin architectures or rendering user-generated content.
+
+## How to create dynamic components
+
+Creating and loading dynamic components involves identifying a location in the DOM where the component should be placed and then using Angular's APIs to instantiate and attach it.
+
+### The anchor point: `ViewContainerRef`
+
+Every component instance in Angular has a `ViewContainerRef`. This object represents a container where one or more views can be attached. A view can be a host view (the view of the component itself) or an embedded view (like those created by `*ngIf` or `*ngFor`).
+
+When creating dynamic components, you use a `ViewContainerRef` as the anchor point in the DOM where the dynamic component's host view will be inserted. You can obtain a `ViewContainerRef` for a specific element in your template using `@ViewChild` or `@ViewChildren`.
+
+```typescript
+import { ViewContainerRef, ViewChild } from '@angular/core';
+
+// ... inside your component class
+@ViewChild('dynamicInsertPoint', { read: ViewContainerRef })
+container!: ViewContainerRef;
+```
+
+Here, `#dynamicInsertPoint` is a template reference variable on an element (like a `div`) in your component's template. The `{ read: ViewContainerRef }` option tells `@ViewChild` to return the `ViewContainerRef` associated with that element, rather than the element itself.
+
+### Creating the component instance (Angular 13+)
+
+Available from Angular 13 onwards, the process for creating dynamic components was simplified. You no longer need to use `ComponentFactoryResolver` or declare components in the now-removed `entryComponents` array.
+
+You can directly call the `createComponent` method on the `ViewContainerRef`, passing the class of the component you want to create.
+
+```typescript
+import {
+  Component,
+  ViewChild,
+  ViewContainerRef,
+  AfterViewInit,
+} from '@angular/core';
+import { MyDynamicComponent } from './my-dynamic.component'; // The component class to load
+
+@Component({
+  selector: 'app-dynamic-host',
+  template: `
+    <h2>Dynamic Component Host</h2>
+    <div #dynamicContainer></div>
+    <!-- Anchor point -->
+  `,
+})
+export class DynamicHostComponent implements AfterViewInit {
+  @ViewChild('dynamicContainer', { read: ViewContainerRef })
+  container!: ViewContainerRef;
+
+  ngAfterViewInit() {
+    // Clear any previously created components in this container
+    this.container.clear();
+
+    // Create the component instance dynamically
+    const componentRef = this.container.createComponent(MyDynamicComponent);
+
+    // componentRef is a ComponentRef, allowing interaction with the instance
+    // You can set inputs, subscribe to outputs, or call methods
+    componentRef.instance.inputData = 'Data passed dynamically';
+    componentRef.instance.outputEvent.subscribe(value => {
+      console.log('Dynamic component emitted:', value);
+    });
+
+    // Remember to destroy the component when it's no longer needed
+    // componentRef.destroy();
+  }
+}
+```
+
+In this example:
+
+1.  `DynamicHostComponent` has a `div` with a template reference variable `#dynamicContainer`.
+2.  `@ViewChild` is used to get the `ViewContainerRef` associated with this `div`.
+3.  In `ngAfterViewInit` (or another lifecycle hook/method), `container.createComponent(MyDynamicComponent)` is called. This instantiates `MyDynamicComponent`, attaches its view to the DOM inside the `div`, and returns a `ComponentRef`.
+4.  The `ComponentRef` provides access to the created component instance (`componentRef.instance`), allowing you to set inputs or subscribe to outputs.
+
+### Interacting with the dynamic component: `ComponentRef`
+
+The `createComponent` method returns a `ComponentRef`. This object is a handle to the dynamically created component instance. It allows you to:
+
+- Access the component instance itself (`componentRef.instance`).
+- Set inputs (`componentRef.setInput('inputName', value)` - Available from Angular 14+).
+- Subscribe to outputs (via `componentRef.instance.outputName.subscribe(...)`).
+- Trigger change detection for that specific component (`componentRef.changeDetectorRef.detectChanges()`).
+- Destroy the component and clean up its resources (`componentRef.destroy()`).
+
+It's crucial to call `componentRef.destroy()` when the dynamic component is no longer needed to prevent memory leaks. Clearing the `ViewContainerRef` using `container.clear()` also destroys all views (including dynamic components) attached to it.
+
+### The traditional way (pre-Angular 13)
+
+Before Angular 13, creating dynamic components required a few extra steps:
+
+1.  **`entryComponents`:** The component had to be listed in the `entryComponents` array of the module or component where it was used dynamically. This told the Angular compiler to create a `ComponentFactory` for it, even if it wasn't found in any template. This array is deprecated and removed in Angular 13.
+2.  **`ComponentFactoryResolver`:** You needed to inject `ComponentFactoryResolver` and use it to get the `ComponentFactory` for the desired component class (`resolver.resolveComponentFactory(MyDynamicComponent)`).
+3.  **`ViewContainerRef.createComponent`:** You would then call `container.createComponent(factory)`, passing the factory obtained in the previous step.
+
+This older approach is generally not recommended for new development in Angular 13+.
+
+## Further reading
+
+- [Angular Documentation: Dynamic Component Loading](https://angular.dev/guide/components/dynamic-components)
+- [Angular Documentation: ViewContainerRef](https://angular.dev/api/core/ViewContainerRef)
+- [Angular Documentation: ComponentRef](https://angular.dev/api/core/ComponentRef)

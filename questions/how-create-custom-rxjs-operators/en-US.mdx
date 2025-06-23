@@ -1,0 +1,208 @@
+---
+title: How do you create custom RxJS operators?
+---
+
+## TL;DR
+
+Creating custom RxJS operators allows you to encapsulate common observable transformation logic for reusability and readability. A custom operator is essentially a function that takes a source observable as input and returns a new observable, typically by applying one or more existing RxJS operators using the `pipe` method.
+
+The most common pattern for a custom operator is a function that returns another function. The outer function can optionally take configuration arguments, and the inner function takes the source observable and returns the transformed observable.
+
+Here's a basic structure:
+
+```typescript
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
+
+function myCustomOperator<T>(): (source: Observable<T>) => Observable<string> {
+  return (source: Observable<T>) => {
+    return source.pipe(
+      // Apply existing operators here
+      map(value => `Processed: ${value}`)
+    );
+  };
+}
+```
+
+You then use it with the `pipe` method on an observable:
+
+```typescript
+import { of } from 'rxjs';
+
+of(1, 2, 3)
+  .pipe(
+    myCustomOperator() // Call the factory function
+  )
+  .subscribe(value => console.log(value));
+// Output:
+// Processed: 1
+// Processed: 2
+// Processed: 3
+```
+
+This pattern makes your code cleaner and easier to maintain by abstracting complex observable sequences into single, descriptive functions.
+
+---
+
+## Why create custom RxJS operators?
+
+Creating custom operators offers several benefits:
+
+### Reusability
+
+If you find yourself repeating the same sequence of RxJS operators in multiple places in your application, packaging them into a custom operator allows you to write the logic once and reuse it.
+
+### Readability
+
+Complex observable pipelines can become difficult to read. A custom operator can give a descriptive name to a sequence of operations, making the code that uses it much clearer. For example, instead of `source$.pipe(filter(...), map(...), distinctUntilChanged(...))`, you might have `source$.pipe(filterAndMapUnique(...))`.
+
+### Abstraction
+
+Custom operators hide the implementation details of the observable transformation, allowing developers to focus on what the operator does rather than how it does it.
+
+## Structure of a custom operator
+
+A custom RxJS operator is a function that takes a source `Observable` as its input and returns a new `Observable` that emits values based on the transformation logic applied.
+
+The most common and recommended way to create a custom operator is using the "pipeable operator" pattern. This involves creating a function that returns another function. The returned function is the actual operator that will be used within the `pipe` method.
+
+### The pipeable operator pattern
+
+The structure looks like this:
+
+```typescript
+import { Observable } from 'rxjs';
+
+// Outer function (optional arguments for configuration)
+function myCustomOperator<T, R>(/* config arguments */): (
+  source: Observable<T>
+) => Observable<R> {
+  // Return the inner function (the actual operator)
+  return (source: Observable<T>) => {
+    // Inside here, you define the transformation logic
+    // You typically use source.pipe() and apply existing operators
+    return source
+      .pipe
+      // ... apply operators like map, filter, switchMap, etc. ...
+      ();
+  };
+}
+```
+
+- The outer function `myCustomOperator` is often called a "factory function". It's what you call when you use the operator inside `pipe`. It can accept arguments to configure the operator's behavior.
+- The inner function is the actual operator. It receives the `source` observable as input and must return a new `Observable`.
+- Inside the inner function, you use `source.pipe()` to apply standard RxJS operators to transform the stream.
+
+## Simple custom operator example
+
+Let's create a simple custom operator called `logAndMap` that logs each value emitted by the source observable and then maps it to a string indicating it has been processed.
+
+```typescript
+import { Observable } from 'rxjs';
+import { tap, map } from 'rxjs/operators';
+
+/**
+ * Custom operator that logs each value and then maps it to a processed string.
+ */
+function logAndMap<T>(): (source: Observable<T>) => Observable<string> {
+  return (source: Observable<T>) => {
+    return source.pipe(
+      tap(value => console.log('Received value:', value)), // Log the value
+      map(value => `Processed: ${value}`) // Map to a new string
+    );
+  };
+}
+```
+
+### Using the custom operator
+
+You use this custom operator just like any built-in pipeable operator:
+
+```typescript
+import { of } from 'rxjs';
+import { logAndMap } from './log-and-map.operator'; // Assuming the operator is in this file
+
+of(10, 20, 30)
+  .pipe(
+    logAndMap() // Call the factory function
+  )
+  .subscribe(
+    value => console.log('Subscribed value:', value),
+    error => console.error(error),
+    () => console.log('Complete')
+  );
+```
+
+When you run this code, the output will be:
+
+```
+Received value: 10
+Subscribed value: Processed: 10
+Received value: 20
+Subscribed value: Processed: 20
+Received value: 30
+Subscribed value: Processed: 30
+Complete
+```
+
+## Custom operator with configuration
+
+Custom operators become even more powerful when they accept configuration arguments. Let's modify the `logAndMap` operator to accept a prefix for the log message.
+
+```typescript
+import { Observable } from 'rxjs';
+import { tap, map } from 'rxjs/operators';
+
+/**
+ * Custom operator that logs each value with a prefix and then maps it to a processed string.
+ * @param logPrefix The prefix to use for the log message.
+ */
+function logAndMapWithPrefix<T>(
+  logPrefix: string
+): (source: Observable<T>) => Observable<string> {
+  return (source: Observable<T>) => {
+    return source.pipe(
+      tap(value => console.log(`${logPrefix}:`, value)), // Use the prefix
+      map(value => `Processed: ${value}`)
+    );
+  };
+}
+```
+
+### Using the configurable operator
+
+Now you pass the configuration argument when calling the factory function inside `pipe`:
+
+```typescript
+import { of } from 'rxjs';
+import { logAndMapWithPrefix } from './log-and-map-with-prefix.operator';
+
+of('A', 'B', 'C')
+  .pipe(
+    logAndMapWithPrefix('--- Data ---') // Pass the prefix here
+  )
+  .subscribe(
+    value => console.log('Subscribed value:', value),
+    error => console.error(error),
+    () => console.log('Complete')
+  );
+```
+
+The output will now include the custom prefix:
+
+```
+--- Data ---: A
+Subscribed value: Processed: A
+--- Data ---: B
+Subscribed value: Processed: B
+--- Data ---: C
+Subscribed value: Processed: C
+Complete
+```
+
+This pattern of using a factory function that returns the actual operator is the standard way to create custom pipeable operators in modern RxJS (since version 5.5+).
+
+## Further reading
+
+- [RxJS Documentation: Creating Custom Operators](https://rxjs.dev/guide/operators#creating-custom-operators)
+- [Learn RxJS: Custom Operators](https://www.learnrxjs.io/learn-rxjs/operators/utility/custom)

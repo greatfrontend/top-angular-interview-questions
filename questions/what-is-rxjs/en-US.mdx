@@ -1,0 +1,200 @@
+---
+title: What is RxJS?
+---
+
+## TL;DR
+
+RxJS is a library for reactive programming using Observables, making it easier to compose asynchronous or callback-based code sequences. Think of it as dealing with streams of data or events over time.
+
+Its core concepts are:
+
+- **Observables:** Represent a stream of values that can be emitted over time.
+- **Observers (or Subscribers):** Listen to an Observable and react to the values it emits, as well as error or completion notifications.
+- **Operators:** Pure functions that take an Observable as input and return a new Observable. They are used to transform, filter, or combine streams.
+
+Angular heavily uses RxJS for handling asynchronous operations like HTTP requests (the `HttpClient` returns Observables), routing events, form control value changes, and custom events via `EventEmitter`. It provides a powerful and consistent way to manage complex asynchronous logic in a declarative manner.
+
+---
+
+## What is RxJS?
+
+RxJS (Reactive Extensions for JavaScript) is a library that brings the concepts of reactive programming to JavaScript. It provides tools for working with asynchronous data streams using Observables. Reactive programming is a paradigm focused on reacting to changes or events as they occur over time.
+
+## Core concepts of RxJS
+
+RxJS is built around a few fundamental concepts:
+
+### Observables
+
+An Observable represents a stream of values that can be emitted over time. It's a push-based system, meaning the Observable "pushes" values to its subscribers when they become available. Observables can emit zero, one, or multiple values, and can optionally send an error or a completion notification. They are lazy; the stream doesn't start emitting values until someone subscribes to it.
+
+```typescript
+import { Observable } from 'rxjs';
+
+// Create a simple observable that emits 1, 2, 3 and then completes
+const myObservable = new Observable<number>(subscriber => {
+  subscriber.next(1);
+  subscriber.next(2);
+  subscriber.next(3);
+  setTimeout(() => {
+    subscriber.next(4);
+    subscriber.complete(); // Signal completion
+  }, 1000);
+});
+```
+
+### Observers (or Subscribers)
+
+An Observer is an object with methods that define how to handle the values emitted by an Observable, as well as error and completion notifications. When you call the `subscribe()` method on an Observable, you provide an Observer (or callback functions for `next`, `error`, and `complete`).
+
+The Observer object typically has three methods:
+
+- `next(value)`: Called for each value emitted by the Observable
+- `error(err)`: Called if the Observable encounters an error
+- `complete()`: Called when the Observable finishes emitting values
+
+```typescript
+// Subscribe to the observable
+myObservable.subscribe({
+  next: value => console.log('Received value:', value),
+  error: err => console.error('Something went wrong:', err),
+  complete: () => console.log('Observable completed'),
+});
+
+// Output:
+// Received value: 1
+// Received value: 2
+// Received value: 3
+// Received value: 4 (after 1 second)
+// Observable completed
+```
+
+### Operators
+
+Operators are pure functions that allow you to manipulate Observables. They take an input Observable and return a new Observable, without modifying the original. Operators are the building blocks for complex asynchronous logic. They are typically used with the `pipe()` method on an Observable.
+
+Examples of common operators include:
+
+- `map`: Transforms each value emitted by the source Observable
+- `filter`: Emits only those values from the source Observable that satisfy a specified predicate
+- `debounceTime`: Waits for a specified time to pass between emissions before emitting the latest value
+- `switchMap`: Projects each source value to an Observable which is merged in the output Observable, unsubscribing from the previous projected Observable
+
+```typescript
+import { of } from 'rxjs';
+import { map, filter } from 'rxjs/operators';
+
+const source = of(1, 2, 3, 4, 5);
+
+const example = source.pipe(
+  filter(num => num % 2 === 0), // Keep only even numbers
+  map(num => num * 10) // Multiply each by 10
+);
+
+example.subscribe(value => console.log('Processed value:', value));
+
+// Output:
+// Processed value: 20
+// Processed value: 40
+```
+
+## Why is RxJS used in Angular?
+
+Angular leverages RxJS heavily to manage asynchronous operations and event handling in a consistent and declarative way.
+
+### Handling HTTP requests
+
+The `HttpClient` service in Angular returns Observables. This allows you to easily handle responses, errors, and chain multiple requests using RxJS operators.
+
+```typescript
+import { HttpClient } from '@angular/common/http';
+import { Component } from '@angular/core';
+import { catchError, map } from 'rxjs/operators';
+import { of } from 'rxjs';
+
+@Component({
+  /* ... */
+})
+export class MyComponent {
+  constructor(private http: HttpClient) {}
+
+  getData() {
+    this.http
+      .get('/api/data')
+      .pipe(
+        map(response => response as any[]), // Type assertion or interface
+        catchError(error => {
+          console.error('Error fetching data', error);
+          return of([]); // Return an empty array or handle error
+        })
+      )
+      .subscribe(data => {
+        console.log('Data received:', data);
+      });
+  }
+}
+```
+
+### Event handling
+
+Angular's `EventEmitter` extends RxJS's `Subject`, making it an Observable. This is used for component communication (`@Output` properties). You can also create Observables from DOM events using `fromEvent`.
+
+```typescript
+import { fromEvent } from 'rxjs';
+import { debounceTime } from 'rxjs/operators';
+
+const button = document.querySelector('button');
+if (button) {
+  fromEvent(button, 'click')
+    .pipe(
+      debounceTime(300) // Prevent rapid clicks
+    )
+    .subscribe(event => {
+      console.log('Button clicked (debounced)', event);
+    });
+}
+```
+
+### Routing
+
+The `ActivatedRoute` service provides Observables for route parameters (`params`), query parameters (`queryParams`), and route data (`data`), allowing you to react to changes in the route.
+
+```typescript
+import { ActivatedRoute } from '@angular/router';
+import { Component, OnInit } from '@angular/core';
+import { switchMap } from 'rxjs/operators';
+
+@Component({
+  /* ... */
+})
+export class ProductDetailComponent implements OnInit {
+  constructor(private route: ActivatedRoute) {}
+
+  ngOnInit() {
+    this.route.params
+      .pipe(
+        switchMap(params => {
+          const productId = params['id'];
+          // Fetch product data based on ID (e.g., using an HTTP service)
+          // Assuming a service method returns an Observable
+          // return this.productService.getProduct(productId);
+          console.log('Fetching product with ID:', productId);
+          return of({ id: productId, name: `Product ${productId}` }); // Example observable
+        })
+      )
+      .subscribe(product => {
+        console.log('Loaded product:', product);
+      });
+  }
+}
+```
+
+### State management
+
+Libraries like NgRx and Akita, commonly used for state management in Angular, are built upon RxJS Observables to manage and react to state changes.
+
+## Further reading
+
+- [RxJS Official Documentation](https://rxjs.dev/)
+- [Angular Guide: Using Observables in Angular](https://angular.io/guide/observables)
+- [Angular HttpClient Guide](https://angular.io/guide/http)

@@ -1,0 +1,82 @@
+---
+title: What is angular CLI?
+---
+
+## TL;DR
+
+The Angular CLI (Command Line Interface) is a powerful tool used to initialize, develop, scaffold, and maintain Angular applications directly from a command shell. Its main purpose is to automate common development tasks, enforce best practices, and standardize the project structure, significantly boosting developer productivity.
+
+You use commands like:
+
+- `ng new my-app`: Creates a new Angular project
+- `ng generate component my-component`: Generates code for a new component
+- `ng serve`: Builds and serves the application locally for development
+- `ng build`: Compiles the application for deployment
+- `ng test`: Runs unit tests
+
+It helps you quickly set up projects, add features, run tests, and build for production without manual configuration.
+
+---
+
+## What is Angular CLI?
+
+The Angular CLI is a command-line interface tool that you use to initialize, develop, scaffold, and maintain Angular applications. It's the official and recommended way to interact with the Angular framework from your terminal.
+
+## Purpose of Angular CLI
+
+The primary purpose of the Angular CLI is to automate and streamline the entire Angular development workflow. It handles many repetitive tasks, allowing developers to focus more on writing application logic rather than configuration and setup.
+
+## Key Features and Commands
+
+The Angular CLI provides a wide range of commands to manage your project lifecycle:
+
+### Project Initialization
+
+- `ng new <project-name>`: Creates a new workspace and an initial Angular application. This command sets up the necessary project structure, installs dependencies, and configures build tools.
+
+### Code Generation (Scaffolding)
+
+- `ng generate <schematic> <name>` (or `ng g <schematic> <name>`): Generates code for various Angular building blocks. Schematics are templates that the CLI uses to create files and modify your project. Common schematics include:
+  - `component`: Creates a new component (`ng g component my-component`)
+  - `service`: Creates a new service (`ng g service my-service`)
+  - `module`: Creates a new module (`ng g module my-module`)
+  - `directive`: Creates a new directive (`ng g directive my-directive`)
+  - `pipe`: Creates a new pipe (`ng g pipe my-pipe`)
+  - `class`: Creates a new class (`ng g class my-class`)
+  - `interface`: Creates a new interface (`ng g interface my-interface`)
+  - `enum`: Creates a new enum (`ng g enum my-enum`)
+
+### Development Server
+
+- `ng serve`: Builds the application and serves it locally. It automatically rebuilds the application when you change source files and reloads the browser, providing a live development experience. You can typically access it at `http://localhost:4200/`.
+
+### Building for Deployment
+
+- `ng build`: Compiles the application into output files (HTML, CSS, JavaScript) that can be deployed to a web server. It performs optimizations like tree-shaking, ahead-of-time (AOT) compilation, and minification for production builds (`ng build --configuration production`).
+
+### Testing
+
+- `ng test`: Runs the unit tests for the application using a test runner like Karma and a testing framework like Jasmine.
+- `ng e2e`: Runs end-to-end tests using a framework like Protractor (though Playwright or Cypress are now more common and often configured manually or via third-party schematics).
+
+### Linting and Formatting
+
+- `ng lint`: Runs code analysis tools (like ESLint) to check for code quality and style issues.
+- `ng format`: Formats your code according to configured style rules.
+
+### Updating Angular and Libraries
+
+- `ng update`: Updates your application and its dependencies to a newer version of Angular. This command often includes automated migration schematics to help update your code to match changes in the framework or libraries.
+
+## Benefits of Using Angular CLI
+
+- **Standardization:** Enforces a consistent project structure and coding style across different projects and teams.
+- **Productivity:** Automates repetitive tasks like project setup, code generation, and build processes, saving significant development time.
+- **Best Practices:** Generates code and configures tools following Angular's recommended best practices.
+- **Ease of Updates:** Simplifies the process of upgrading Angular and related libraries with automated migration tools.
+- **Integrated Tooling:** Provides a unified interface for interacting with various underlying tools like Webpack, ESLint, Karma, etc.
+
+## Further reading
+
+- [Angular CLI Overview](https://angular.dev/cli)
+- [Angular CLI Command Reference](https://angular.dev/cli/reference)

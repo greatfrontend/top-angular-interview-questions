@@ -1,0 +1,15 @@
+{
+  "slug": "what-is-angular-material",
+  "languages": [],
+  "companies": [],
+  "premium": false,
+  "duration": 5,
+  "published": true,
+  "featured": true,
+  "category": "angular",
+  "topics": ["typescript"],
+  "importance": "low",
+  "ranking": 200,
+  "difficulty": "easy",
+  "section": "basics"
+}

@@ -1,0 +1,146 @@
+---
+title: What are templates?
+---
+
+## TL;DR
+
+In Angular, templates are HTML fragments that define the structure and appearance of a component's view. They are essentially standard HTML enhanced with Angular-specific syntax, allowing you to dynamically display data, respond to user input, and conditionally render elements. Each component is associated with a template, either defined inline using the `template` property or in a separate file using `templateUrl`. Angular compiles these templates to render the component's UI in the browser.
+
+---
+
+## What are templates?
+
+In Angular, a template is a block of HTML that defines the view for a component. It describes how the component's data is presented to the user. Templates are not just static HTML; they are augmented with Angular's template syntax, which allows you to bind data from the component class to the HTML, handle events, and manipulate the DOM dynamically.
+
+## Purpose of templates
+
+The primary purpose of a template is to define the user interface (UI) that a component controls. It acts as the visual representation of the component's state and logic. By separating the view (template) from the component's logic (class), Angular promotes a clear separation of concerns, making components easier to manage, test, and reuse.
+
+## Associating templates with components
+
+Every Angular component must have an associated template. You can define a component's template in one of two ways within the `@Component` decorator:
+
+### Using `templateUrl`
+
+This is the most common approach for larger templates. You specify the path to an external HTML file.
+
+```typescript
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-my-component',
+  templateUrl: './my-component.component.html', // Path to the template file
+  styleUrls: ['./my-component.component.css'],
+})
+export class MyComponent {
+  title = 'Hello from MyComponent';
+}
+```
+
+The content of `my-component.component.html` would be the template:
+
+```html
+<div>
+  <h1>{{ title }}</h1>
+  <p>This is the component's view.</p>
+</div>
+```
+
+### Using `template`
+
+For small, simple templates, you can define the template inline as a string within the component decorator.
+
+```typescript
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-another-component',
+  template: `
+    <div>
+      <h2>Inline Template</h2>
+      <p>This template is defined directly in the component file.</p>
+    </div>
+  `, // Inline template string
+  styles: [
+    `
+      div {
+        border: 1px solid blue;
+        padding: 10px;
+      }
+    `,
+  ],
+})
+export class AnotherComponent {}
+```
+
+## Angular template syntax
+
+Angular extends standard HTML with its own syntax to enable dynamic behavior. Key syntax elements include:
+
+### Interpolation (`{{ ... }}`)
+
+Displays component property values within the HTML.
+
+```html
+<p>The current value is: {{ componentProperty }}</p>
+```
+
+### Property binding (`[property]="expression"`)
+
+Binds a component property value to an HTML element property.
+
+```html
+<img [src]="imageUrl" [alt]="imageAltText" />
+<button [disabled]="isButtonDisabled">Click Me</button>
+```
+
+### Event binding (`(event)="statement"`)
+
+Responds to events emitted by HTML elements or other components by executing a component method.
+
+```html
+<button (click)="onClick()">Save</button> <input (input)="onInput($event)" />
+```
+
+### Two-way binding (`[(ngModel)]="property"`)
+
+Available from Angular 2 onwards, this combines property binding and event binding to create a two-way data flow between an input element's value and a component property. Requires the `FormsModule`.
+
+```html
+<input [(ngModel)]="userName" />
+<p>Hello, {{ userName }}!</p>
+```
+
+### Structural directives (`*directive`)
+
+Modify the structure of the DOM by adding, removing, or manipulating elements. Common examples include `*ngIf`, `*ngFor`, and `*ngSwitch`.
+
+```html
+<p *ngIf="showParagraph">This paragraph is shown conditionally.</p>
+
+<ul>
+  <li *ngFor="let item of items">{{ item }}</li>
+</ul>
+```
+
+### Attribute directives (`[directive]`)
+
+Modify the appearance or behavior of an element, component, or another directive. Common examples include `[ngClass]` and `[ngStyle]`.
+
+```html
+<div [ngClass]="{'active': isActive, 'highlight': isHighlighted}">
+  Styled Div
+</div>
+<p [ngStyle]="{'color': textColor, 'font-size': fontSize + 'px'}">
+  Styled Text
+</p>
+```
+
+## Template compilation
+
+Before the application runs in the browser, Angular compiles the templates. This compilation process translates the Angular template syntax into efficient JavaScript code that can manipulate the DOM directly. This ahead-of-time (AOT) compilation (the default since Angular 9) ensures faster rendering and smaller application bundles compared to just-in-time (JIT) compilation used in older versions or development mode.
+
+## Further reading
+
+- [Angular Documentation: Introduction to templates and template syntax](https://angular.dev/guide/templates)
+- [Angular Documentation: Template syntax reference](https://angular.dev/guide/templates/syntax)

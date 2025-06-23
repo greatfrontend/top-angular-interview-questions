@@ -1,0 +1,111 @@
+---
+title: What is the purpose of `ngFor` `trackBy`?
+---
+
+## TL;DR
+
+The `trackBy` function in Angular's `ngFor` directive is used to improve performance when rendering lists. By default, when the collection iterated by `ngFor` changes (items are added, removed, or reordered), Angular re-renders the entire list of DOM elements.
+
+Using `trackBy`, you provide a function that returns a unique identifier for each item in the collection. Angular then uses this identifier to track items across changes. Instead of re-rendering everything, Angular can efficiently update the DOM by only adding, removing, or moving elements corresponding to items whose identity has changed. This avoids unnecessary destruction and recreation of DOM elements, leading to faster rendering and potentially preserving element state like input focus or scroll position.
+
+You define a `trackBy` function in your component class:
+
+```typescript
+trackById(index: number, item: any): number {
+  return item.id; // Assuming each item has a unique 'id' property
+}
+```
+
+And use it in your template:
+
+```html
+<div *ngFor="let item of items; trackBy: trackById">{{ item.name }}</div>
+```
+
+---
+
+## What is the purpose of `ngFor` `trackBy`?
+
+### Default `ngFor` behavior
+
+The `*ngFor` directive in Angular is used to iterate over a collection (like an array) and render a template for each item in the collection. By default, when the input collection changes – for example, if items are added, removed, or reordered, or if the array reference itself changes – Angular's change detection mechanism might decide to tear down the entire existing DOM tree for the list and rebuild it from scratch based on the new state of the collection.
+
+### The problem without `trackBy`
+
+This default behavior of destroying and recreating DOM elements can be inefficient, especially for large lists or lists that update frequently. Rebuilding the DOM is a costly operation. Furthermore, destroying and recreating elements means losing any associated state, such as user input in form fields within the list items, scroll positions, or element focus.
+
+### How `trackBy` solves the problem
+
+The `trackBy` option provides a way to tell Angular how to identify each item in the collection uniquely. You provide a function to `ngFor` that takes the index and the current item as arguments and returns a unique identifier for that item.
+
+When the collection changes, Angular uses this `trackBy` function to compare the items in the _new_ collection with the items that were previously rendered. If the unique identifier returned by the `trackBy` function for an item matches an identifier from the previous render cycle, Angular knows it's the _same_ logical item.
+
+### Benefits of using `trackBy`
+
+By tracking items using a unique identifier, Angular can perform more efficient DOM manipulations:
+
+- **Improved Performance:** Instead of destroying and recreating all elements, Angular can identify which elements correspond to items that were added, removed, or simply moved. It then only performs the minimal necessary DOM operations (adding new elements, removing old ones, or reordering existing ones). This significantly reduces rendering time and resource consumption, especially for large lists.
+- **Preservation of Element State:** Since elements corresponding to unchanged items are not destroyed and recreated, their state (like input values, focus, scroll position, or component state) is preserved. This provides a better user experience.
+
+### Implementing `trackBy`
+
+To use `trackBy`, you define a function in your component class that accepts the `index` and the `item` from the `ngFor` loop and returns a unique value for the item. A common practice is to use a unique ID property of the item itself.
+
+```typescript
+// In your component.ts file
+import { Component } from '@angular/core';
+
+interface Item {
+  id: number;
+  name: string;
+  // other properties
+}
+
+@Component({
+  selector: 'app-item-list',
+  templateUrl: './item-list.component.html',
+})
+export class ItemListComponent {
+  items: Item[] = [
+    { id: 1, name: 'Apple' },
+    { id: 2, name: 'Banana' },
+    { id: 3, name: 'Cherry' },
+  ];
+
+  // Function to track items by their unique 'id' property
+  trackById(index: number, item: Item): number {
+    return item.id;
+  }
+
+  // Example of updating the list (e.g., adding a new item)
+  addItem() {
+    const newItemId =
+      this.items.length > 0 ? Math.max(...this.items.map(i => i.id)) + 1 : 1;
+    this.items = [
+      ...this.items,
+      { id: newItemId, name: `New Item ${newItemId}` },
+    ];
+    // Without trackBy, adding an item would potentially re-render all existing items.
+    // With trackBy, only the new item's element is added to the DOM.
+  }
+}
+```
+
+Then, you use this function in your template with the `trackBy` keyword:
+
+```html
+<!-- In your item-list.component.html file -->
+<h2>Items</h2>
+<ul>
+  <!-- Use the trackById function with ngFor -->
+  <li *ngFor="let item of items; trackBy: trackById">{{ item.name }}</li>
+</ul>
+<button (click)="addItem()">Add Item</button>
+```
+
+In this example, `trackById` returns the `id` property of each `item`. If the `items` array changes, Angular will use the `id` to determine which `<li>` elements correspond to which items, efficiently updating only the necessary parts of the list.
+
+## Further reading
+
+- [Angular Documentation: `NgForOf` directive](https://angular.dev/api/common/NgForOf)
+- [Angular Documentation: `trackBy` function](https://angular.dev/api/common/NgForOf#trackBy)

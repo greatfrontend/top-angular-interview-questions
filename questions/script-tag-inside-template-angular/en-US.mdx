@@ -1,0 +1,53 @@
+---
+title: What happens if you include a `<script>` tag inside a template?
+---
+
+## TL;DR
+
+If you include a `<script>` tag directly within an Angular component's template (`.html` file), Angular's built-in security mechanisms, specifically sanitization, will prevent it from executing. Angular treats the template content as untrusted HTML by default. During the rendering process, the sanitization pipeline will detect the `<script>` tag and either remove it entirely or neutralize it, ensuring that the code inside the script does not run in the user's browser. This is a crucial security feature designed to protect your application from Cross-Site Scripting (XSS) attacks. You should implement dynamic behavior using Angular's event binding and component logic instead of inline scripts.
+
+---
+
+## Angular's template compilation and security
+
+Angular compiles templates into highly optimized code. During this process, and especially during rendering, Angular employs robust security measures to protect your application from common web vulnerabilities, most notably Cross-Site Scripting (XSS).
+
+## Sanitization prevents script execution
+
+Angular treats all template content as potentially untrusted by default. When Angular renders data or HTML into the DOM, it goes through a sanitization process. This process inspects the HTML for potentially dangerous code, such as `<script>` tags, `javascript:` URLs, or event handlers embedded within attributes (`onerror`, `onload`, etc.).
+
+If a `<script>` tag is found directly within the template HTML, the sanitization process will identify it as unsafe. The default behavior is to strip out or ignore the unsafe elements and attributes. This means the code inside the `<script>` tag will not be added to the DOM in a way that allows it to execute.
+
+Consider this template:
+
+```html
+<div>
+  <p>This is safe content.</p>
+  <script>
+    alert('This script will not run!');
+  </script>
+  <p>More safe content.</p>
+</div>
+```
+
+When Angular renders this template, the `<script>` tag will be detected by the sanitizer and prevented from executing. The resulting DOM will likely not contain the script tag at all, or it might be rendered in a way that is inert (e.g., as plain text if bound unsafely, though direct template inclusion is usually just removed).
+
+## Why this is necessary
+
+Preventing the execution of arbitrary scripts included in templates is a fundamental security measure against Cross-Site Scripting (XSS) attacks. XSS occurs when an attacker injects malicious scripts into a web page viewed by other users. If Angular allowed `<script>` tags to execute directly from templates, it would open up a significant vulnerability, especially if any part of the template content originated from user input.
+
+## Safe alternatives in Angular
+
+Instead of using `<script>` tags for dynamic behavior, Angular provides secure and structured ways to handle interactivity:
+
+- **Event Binding:** Use Angular's event binding syntax (`(event)="method()"`) to respond to user interactions and execute component methods.
+- **Component Logic:** Implement all application logic within your component classes (`.ts` files).
+- **Data Binding:** Use property binding (`[property]="data"`) or interpolation (`{{ data }}`) to display dynamic data safely. Angular automatically sanitizes data bound this way.
+
+If you absolutely need to load and execute external JavaScript, it should be done carefully within the component's TypeScript code, often by manipulating the DOM using Angular's renderer or by loading scripts dynamically in a controlled environment, being mindful of security implications. However, directly embedding `<script>` tags in templates is never the recommended or effective approach in Angular.
+
+## Further reading
+
+- [Angular Security Guide](https://angular.dev/guide/security)
+- [Angular Sanitization](https://angular.dev/guide/security/sanitization)
+- [Cross-Site Scripting (XSS)](https://owasp.org/www-community/attacks/xss/)

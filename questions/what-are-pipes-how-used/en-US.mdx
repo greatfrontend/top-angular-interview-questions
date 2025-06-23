@@ -1,0 +1,211 @@
+---
+title: What are pipes and how is it used?
+---
+
+## TL;DR
+
+Pipes in Angular are a way to transform data for display directly within your templates. They take data as input and return transformed data as output, without changing the original data source.
+
+You use the pipe operator (`|`) in template expressions:
+
+```html
+{{ data | pipeName }} {{ data | pipeName: arg1: arg2 }} {{ data | pipe1 | pipe2
+}}
+```
+
+Angular provides built-in pipes like `DatePipe`, `CurrencyPipe`, `UpperCasePipe`, `JsonPipe`, and `AsyncPipe`. You can also create custom pipes by implementing the `PipeTransform` interface and decorating the class with `@Pipe`. Pipes help keep your component logic clean by moving presentation logic to the template.
+
+---
+
+## What are pipes?
+
+Pipes are a feature in Angular that allow you to transform data before displaying it in the template. They are typically used to format data such as dates, currencies, text cases, or to filter and sort lists. Pipes are applied directly within template expressions using the pipe operator (`|`).
+
+The primary purpose of pipes is to handle presentation logic, keeping your component class focused on application logic and data management.
+
+## Why use pipes?
+
+### Clean component code
+
+Pipes help keep your component classes lean by moving data transformation logic out of the component and into the template or a dedicated pipe class. This improves readability and maintainability of your components.
+
+### Reusability
+
+Pipes are reusable. Once you define a custom pipe or use a built-in one, you can apply it to any data in any template within your application (provided the pipe is available in the relevant module or component).
+
+### Simplicity in templates
+
+The pipe syntax is concise and easy to read, making templates clearer about how data is being presented.
+
+### Performance (Pure Pipes)
+
+By default, pipes are "pure". A pure pipe only re-calculates its output when its input value changes. This can lead to performance optimizations as the pipe transformation isn't re-run on every single change detection cycle if the input hasn't changed.
+
+## How to use pipes
+
+You use pipes within template expressions, typically inside interpolation (`{{ }}`). The pipe operator (`|`) is used to apply a pipe to a value.
+
+### Basic syntax
+
+Apply a single pipe to a value:
+
+```html
+<p>{{ birthday | date }}</p>
+```
+
+### Passing parameters
+
+Many pipes accept parameters to customize their output. Parameters are passed after the pipe name, separated by colons (`:`):
+
+```html
+<p>{{ birthday | date:'mediumDate' }}</p>
+<p>{{ amount | currency:'EUR':'symbol':'1.2-2' }}</p>
+```
+
+### Chaining pipes
+
+You can chain multiple pipes together. The output of the first pipe becomes the input for the second pipe, and so on:
+
+```html
+<p>{{ 'hello world' | uppercase | slice:0:5 }}</p>
+```
+
+## Built-in pipes
+
+Angular provides a collection of built-in pipes for common data transformations:
+
+### `DatePipe`
+
+Formats a date value according to locale rules.
+
+```html
+<p>{{ today | date }}</p>
+<!-- Output: Jun 15, 2024 -->
+<p>{{ today | date:'shortTime' }}</p>
+<!-- Output: 10:30 AM -->
+```
+
+### `UpperCasePipe` and `LowerCasePipe`
+
+Transforms text to upper or lower case.
+
+```html
+<p>{{ 'Angular' | uppercase }}</p>
+<!-- Output: ANGULAR -->
+<p>{{ 'Angular' | lowercase }}</p>
+<!-- Output: angular -->
+```
+
+### `CurrencyPipe`
+
+Formats a number as a currency string.
+
+```html
+<p>{{ price | currency }}</p>
+<!-- Output: $1,234.56 (default locale) -->
+<p>{{ price | currency:'GBP' }}</p>
+<!-- Output: £1,234.56 -->
+```
+
+### `DecimalPipe`
+
+Formats a number as a decimal number.
+
+```html
+<p>{{ pi | number:'1.0-2' }}</p>
+<!-- Output: 3.14 -->
+```
+
+### `PercentPipe`
+
+Formats a number as a percentage string.
+
+```html
+<p>{{ progress | percent }}</p>
+<!-- Output: 75% -->
+```
+
+### `JsonPipe`
+
+Converts a JavaScript value into a JSON string. Useful for debugging.
+
+```html
+<pre>{{ user | json }}</pre>
+```
+
+### `AsyncPipe`
+
+Unwraps a value from an asynchronous primitive like a Promise or an Observable. It subscribes to an Observable or waits for a Promise to resolve and returns the emitted value. It automatically unsubscribes when the component is destroyed.
+
+```html
+<p>{{ data$ | async }}</p>
+```
+
+## Custom pipes
+
+You can create your own pipes to handle transformations not covered by built-in pipes or to encapsulate custom logic.
+
+### Creating a custom pipe
+
+1.  Generate the pipe using the Angular CLI: `ng generate pipe my-custom-pipe`
+2.  Implement the `PipeTransform` interface, which requires a `transform` method.
+3.  Decorate the class with `@Pipe`, providing a `name` property which is used in templates.
+
+Example: A simple pipe to reverse a string.
+
+```typescript
+import { Pipe, PipeTransform } from '@angular/core';
+
+@Pipe({
+  name: 'reverseString',
+})
+export class ReverseStringPipe implements PipeTransform {
+  transform(value: string): string {
+    if (!value) {
+      return '';
+    }
+    return value.split('').reverse().join('');
+  }
+}
+```
+
+### Using a custom pipe
+
+Ensure the custom pipe is declared in the appropriate Angular module (`@NgModule`). Then, use it in templates like any other pipe:
+
+```html
+<p>{{ 'hello' | reverseString }}</p>
+<!-- Output: olleh -->
+```
+
+## Pure vs. Impure pipes
+
+Pipes can be either pure or impure. This affects how Angular's change detection interacts with them.
+
+### Pure pipes
+
+- This is the default behavior (`pure: true`).
+- A pure pipe is only executed when its input value changes or when one of its parameters changes.
+- Angular performs a shallow check for primitive inputs (string, number, boolean) and checks object references for object inputs (Date, Array, Object). It does _not_ check the contents of objects or arrays.
+- Pure pipes are generally preferred for performance.
+
+### Impure pipes
+
+- An impure pipe is executed during _every_ change detection cycle, regardless of whether the input value has changed.
+- You mark a pipe as impure by setting `pure: false` in the `@Pipe` decorator:
+  ```typescript
+  @Pipe({
+    name: 'myImpurePipe',
+    pure: false, // This makes it impure
+  })
+  export class MyImpurePipe implements PipeTransform {
+    // ...
+  }
+  ```
+- Impure pipes are necessary for transformations that depend on external state or the contents of objects/arrays (e.g., a filter pipe that needs to re-run if an item is added to the array, even if the array reference doesn't change).
+- Use impure pipes cautiously as they can impact performance if executed frequently. `AsyncPipe` is a common example of an impure pipe, but its internal logic manages subscriptions efficiently.
+
+## Further reading
+
+- [Angular Documentation on Pipes](https://angular.dev/guide/pipes)
+- [Built-in Angular Pipes](https://angular.dev/api?query=pipe)

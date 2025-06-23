@@ -1,0 +1,79 @@
+---
+title: Explain different types of compilation Angular provides and why is the need for it.
+---
+
+## TL;DR
+
+Angular needs to compile your application's code, which includes TypeScript and HTML templates, into efficient JavaScript that browsers can understand and execute. There are two main types of compilation:
+
+- **Just-in-Time (JIT) compilation:** This happens in the browser at runtime. The Angular compiler is included in the application bundle, and it compiles the application code just before it runs. This is typically used during development (`ng serve`) because it allows for faster rebuilds.
+- **Ahead-of-Time (AOT) compilation:** This happens during the build process, before the browser loads the application. The Angular compiler runs on your machine, converting your templates and components into highly optimized JavaScript. The browser then downloads and runs the pre-compiled code. This is the default and recommended approach for production builds (`ng build --configuration production`) because it results in smaller bundles, faster startup times, and catches template errors earlier.
+
+AOT is preferred for production due to its performance benefits and early error detection.
+
+---
+
+## Why compilation is needed in Angular
+
+Angular applications are primarily written using TypeScript and HTML templates. Browsers, however, only understand JavaScript, HTML, and CSS. The compilation process is necessary to transform the Angular-specific code (like component decorators, template syntax, data binding expressions) into standard JavaScript that the browser can execute efficiently.
+
+Specifically, the Angular compiler performs tasks such as:
+
+- Parsing your HTML templates and converting them into JavaScript code that creates the corresponding DOM structure
+- Analyzing data binding expressions and generating code to update the DOM when data changes
+- Processing component metadata (like selectors, providers, view encapsulation)
+- Validating template syntax and usage of directives/components
+
+Without compilation, the browser wouldn't know how to interpret Angular templates or connect them to your component classes.
+
+## Just-in-Time (JIT) compilation
+
+### How JIT works
+
+In JIT compilation, the Angular compiler is included as part of your application's bundle. When a user opens your application in their browser, the browser downloads the application code _and_ the Angular compiler. The compiler then runs in the user's browser at runtime, compiling the application's components and templates on the fly before rendering them.
+
+### When JIT is used
+
+JIT compilation was the default for development builds (`ng serve`) in older Angular versions (prior to Angular 9). While AOT is now the default for both development and production, you can still explicitly enable JIT if needed, though it's rarely recommended for modern workflows.
+
+### Advantages of JIT
+
+- **Faster rebuilds during development:** Because the compilation happens in the browser, the build process itself is quicker as it doesn't include the compilation step. This can sometimes lead to faster iteration cycles during development, although modern AOT builds are also very fast.
+
+### Disadvantages of JIT
+
+- **Larger bundle size:** The Angular compiler itself is included in the application bundle, significantly increasing its size.
+- **Slower initial rendering:** The browser has to download the compiler and then perform the compilation step before it can render the application, leading to a longer startup time.
+- **Runtime errors:** Template errors or issues with component metadata are only discovered when the application runs in the browser, potentially leading to errors that users encounter.
+- **Security risks:** Including the compiler and application source code in the browser can potentially expose more information than necessary.
+
+## Ahead-of-Time (AOT) compilation
+
+### How AOT works
+
+In AOT compilation, the Angular compiler runs as a build step _before_ the browser loads the application. It compiles your entire application (components, templates, etc.) into JavaScript and CSS files during the build process. The browser then downloads and executes this pre-compiled code. The Angular compiler is _not_ included in the final application bundle.
+
+### When AOT is used
+
+AOT compilation is the default and recommended compilation strategy for all Angular builds from Angular 9 onwards, including both development (`ng serve`) and production (`ng build --configuration production`).
+
+### Advantages of AOT
+
+- **Smaller bundle size:** The Angular compiler is not included in the final bundle, resulting in significantly smaller application size.
+- **Faster initial rendering:** The browser downloads pre-compiled code, which can be executed immediately without waiting for compilation. This leads to faster application startup times.
+- **Earlier error detection:** Template errors and other compilation issues are caught during the build process, before the application is deployed or even run in a browser. This shifts error detection from runtime to build time.
+- **Improved security:** Application source code and templates are compiled into JavaScript during the build, reducing the amount of original code exposed in the browser.
+- **Better performance:** The compiler can perform optimizations during the build process that are not possible with JIT.
+
+### Disadvantages of AOT
+
+- **Slightly slower build time:** The compilation step is part of the build process, which can make the build slightly longer compared to a JIT build (though modern AOT builds are highly optimized).
+
+## AOT as the default
+
+From Angular 9 onwards, AOT compilation became the default for both `ng serve` and `ng build`. This change significantly improved the development experience by providing faster startup times and catching template errors earlier, even during development. For production builds, AOT is essential for delivering performant and small application bundles.
+
+## Further reading
+
+- [Angular documentation on Ahead-of-Time Compilation](https://angular.dev/tools/cli/aot)
+- [Angular documentation on Building and serving](https://angular.dev/tools/cli/build)

@@ -1,0 +1,238 @@
+---
+title: What techniques can improve performance in an Angular app?
+---
+
+## TL;DR
+
+Improving Angular app performance involves both build-time and runtime optimizations.
+
+Key techniques include:
+
+- **Build-time:**
+  - Using Ahead-of-Time (AOT) compilation, which is the default for production builds, compiles your Angular HTML and TypeScript into efficient JavaScript code during the build process
+  - Building with production flags (`ng build --configuration production` or `ng build --prod` in older versions) to enable optimizations like tree shaking, minification, and dead code elimination
+- **Runtime:**
+  - Implementing **lazy loading** for modules to load application parts only when they are needed, significantly reducing the initial bundle size and load time
+  - Setting the **change detection strategy** to `OnPush` for components. This tells Angular to only check for changes when component inputs change, an event originates from the component or its children, or an observable the component is subscribed to emits a value (when using the `async` pipe), drastically reducing the number of checks performed
+  - Using the `trackBy` function with `*ngFor` directives to help Angular efficiently update the DOM when list items change, improving rendering performance for large lists
+  - Optimizing RxJS subscriptions by unsubscribing to prevent memory leaks and using appropriate operators (`debounceTime`, `distinctUntilChanged`, `takeUntil`) to control the flow of data
+  - Offloading heavy computations to **web workers** to keep the main UI thread responsive
+  - Implementing **virtual scrolling** for large lists to render only the items currently visible in the viewport
+  - Considering **Server-Side Rendering (SSR)** or **pre-rendering** for improved initial load performance and SEO
+
+Profiling tools like browser developer tools and Angular DevTools are essential for identifying performance bottlenecks.
+
+---
+
+## Build-time optimizations
+
+These techniques are applied when you build your Angular application, typically for production deployment.
+
+### Ahead-of-Time (AOT) compilation
+
+AOT compilation is the default for production builds (`ng build --configuration production` or `ng build --prod`). It compiles your Angular HTML and TypeScript code into efficient JavaScript during the build phase, before the browser downloads and runs the code.
+
+- **Faster rendering:** The browser downloads a pre-compiled version of the application, so it can render it immediately without waiting for compilation
+- **Smaller application size:** The compiler removes unused Angular features and includes the compiler itself only in development builds
+- **Detects template errors earlier:** Errors in templates are detected during the build process rather than at runtime
+
+### Production build flags
+
+Using the production configuration when building (`ng build --configuration production`) enables several performance optimizations:
+
+- **AOT compilation:** As mentioned above, this is enabled by default
+- **Tree shaking:** Removes unused code from your application and libraries
+- **Minification and uglification:** Reduces the size of your JavaScript, CSS, and HTML files by removing whitespace, comments, and shortening variable names
+- **Dead code elimination:** Removes code that is unreachable or has no effect
+
+Always build your application for production using `ng build --configuration production` before deploying.
+
+### Tree shaking
+
+Tree shaking is a form of dead code elimination. It's a build process that analyzes your code and removes any code that is not actually used by your application. This significantly reduces the final bundle size. Angular CLI's production build process automatically performs tree shaking.
+
+### Bundling and minification
+
+The build process bundles your application's files into a smaller number of files (often just a few JavaScript, CSS, and HTML files) to reduce the number of HTTP requests the browser needs to make. Minification further reduces the size of these bundles by removing unnecessary characters like whitespace and comments, and by shortening variable names.
+
+## Runtime optimizations
+
+These techniques are implemented within your application's code and affect how it runs in the browser.
+
+### Lazy loading modules
+
+Lazy loading is a design pattern that loads parts of your application only when they are needed, typically when a user navigates to a specific route.
+
+- It significantly reduces the initial bundle size and load time of your application, as the browser only downloads the code required for the initial view
+- It's implemented using the `loadChildren` property in your Angular routing configuration
+
+```typescript
+const routes: Routes = [
+  { path: '', component: HomeComponent },
+  {
+    path: 'admin',
+    loadChildren: () => import('./admin/admin.module').then(m => m.AdminModule),
+  },
+];
+```
+
+### Change detection strategy
+
+Angular's change detection mechanism checks for changes in your application's data and updates the DOM accordingly. By default, it checks every component from top to bottom whenever data might have changed (e.g., after an event, an HTTP response, a timer).
+
+Setting the `changeDetection` strategy to `OnPush` for components can drastically improve performance, especially in large applications with many components.
+
+- With `OnPush`, a component only checks for changes under specific conditions:
+  - When one of its `@Input()` properties changes (by reference for objects/arrays, or by value for primitives)
+  - When an event is triggered by the component or one of its children
+  - When change detection is explicitly triggered (e.g., using `ChangeDetectorRef.markForCheck()`)
+  - When an observable subscribed to using the `async` pipe emits a new value
+- This prevents unnecessary checks in parts of the component tree that haven't been affected by a change
+
+```typescript
+import { Component, ChangeDetectionStrategy } from '@angular/core';
+
+@Component({
+  selector: 'app-my-component',
+  templateUrl: './my-component.html',
+  styleUrls: ['./my-component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush, // Set strategy here
+})
+export class MyComponent {
+  // ... component logic
+}
+```
+
+### Optimizing lists with `trackBy`
+
+When rendering lists using `*ngFor`, Angular re-renders the entire list whenever the underlying data array changes. For large lists, this can be inefficient.
+
+The `trackBy` function provides a hint to Angular about how to identify individual items in the list. When the list changes, Angular uses the `trackBy` function to determine which items have been added, removed, or moved, and only updates the corresponding DOM elements instead of re-rendering the entire list.
+
+```typescript
+import { Component } from '@angular/core';
+
+interface Item {
+  id: number;
+  name: string;
+}
+
+@Component({
+  selector: 'app-list',
+  template: `
+    <ul>
+      <li *ngFor="let item of items; trackBy: trackById">
+        {{ item.name }}
+      </li>
+    </ul>
+  `,
+})
+export class ListComponent {
+  items: Item[] = [
+    { id: 1, name: 'Item 1' },
+    { id: 2, name: 'Item 2' },
+  ];
+
+  trackById(index: number, item: Item): number {
+    return item.id; // Use a unique identifier for each item
+  }
+}
+```
+
+### RxJS optimization
+
+Using RxJS effectively is crucial for performance in reactive Angular applications.
+
+- **Unsubscribe from subscriptions:** Always unsubscribe from observables when the component is destroyed to prevent memory leaks. Use operators like `takeUntil` or `take` with a subject that emits when the component is destroyed, or use the `async` pipe which handles unsubscription automatically.
+- **Use appropriate operators:** Operators like `debounceTime`, `throttleTime`, `distinctUntilChanged`, `filter`, and `map` can help control the flow of data, reduce the number of emissions, and transform data efficiently before it reaches your component logic or template.
+
+```typescript
+import { Component, OnDestroy } from '@angular/core';
+import { Subject, interval } from 'rxjs';
+import { takeUntil, debounceTime } from 'rxjs/operators';
+
+@Component({
+  selector: 'app-rxjs-example',
+  template: `<p>Value: {{ latestValue }}</p>`,
+})
+export class RxjsExampleComponent implements OnDestroy {
+  private destroy$ = new Subject<void>();
+  latestValue: number | null = null;
+
+  constructor() {
+    interval(100) // Emits every 100ms
+      .pipe(
+        debounceTime(50), // Wait 50ms after last emission before emitting
+        takeUntil(this.destroy$) // Automatically unsubscribe when destroy$ emits
+      )
+      .subscribe(value => {
+        this.latestValue = value;
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+}
+```
+
+### Web workers
+
+Web workers allow you to run CPU-intensive tasks in a background thread, separate from the main UI thread. This prevents the UI from freezing or becoming unresponsive during heavy computations.
+
+- Use web workers for tasks like complex calculations, data processing, or large file manipulations.
+- Angular CLI provides support for generating web workers.
+
+### Virtual scrolling
+
+Available from Angular 7 onwards, the Component Dev Kit (CDK) includes a virtual scrolling module. This technique renders only the items in a long list that are currently visible in the viewport, rather than rendering all items at once. As the user scrolls, the component dynamically loads and unloads items, significantly improving performance and memory usage for very large lists.
+
+### Server-Side Rendering (SSR) or Pre-rendering
+
+For applications that require fast initial load times or better SEO, consider using Angular Universal for Server-Side Rendering or pre-rendering.
+
+- **SSR:** The application is rendered on the server for the initial request, sending fully rendered HTML to the browser. The browser then bootstraps the Angular application to take over interactivity.
+- **Pre-rendering:** Similar to SSR, but the application is rendered to static HTML files at build time for a predefined set of routes. This is suitable for static or mostly static sites.
+
+Both techniques improve perceived performance and are beneficial for SEO because search engine crawlers can easily index the content.
+
+### Optimizing assets
+
+Ensure that static assets like images, fonts, and other media are optimized.
+
+- Use compressed image formats (WebP, AVIF) and optimize existing JPEGs/PNGs.
+- Serve appropriately sized images for different devices.
+- Use web fonts efficiently (e.g., subsetting, font display strategies).
+- Lazy load images that are below the fold.
+
+## Profiling and monitoring
+
+Identifying performance bottlenecks is the first step to fixing them.
+
+### Browser DevTools
+
+Modern browser developer tools (Chrome DevTools, Firefox Developer Tools) provide powerful profiling capabilities:
+
+- **Performance tab:** Record runtime performance to see where time is spent (scripting, rendering, painting). Identify long tasks and layout thrashing.
+- **Memory tab:** Take heap snapshots and record memory allocations to detect memory leaks.
+- **Network tab:** Analyze network requests, response times, and resource sizes.
+
+### Angular DevTools
+
+Available as a browser extension, Angular DevTools provides Angular-specific insights:
+
+- **Profiler tab:** Visualize the change detection cycles and component rendering times, helping you identify components that are frequently checked or take a long time to render.
+- **Components tab:** Inspect component properties, inputs, and outputs, and see their change detection strategy.
+
+Using these tools regularly during development and testing is crucial for maintaining a performant application.
+
+## Further reading
+
+- [Angular Performance Guide](https://angular.io/guide/performance)
+- [Lazy Loading Modules](https://angular.io/guide/lazy-loading-modules)
+- [Change Detection Strategy](https://angular.io/guide/change-detection-strategies)
+- [Optimizing \*ngFor with trackBy](https://angular.io/api/common/NgForOf#trackBy)
+- [Angular Universal (SSR)](https://angular.io/guide/universal)
+- [Angular CDK Virtual Scrolling](https://material.angular.io/cdk/scrolling/overview)
+- [Angular DevTools](https://angular.io/guide/devtools)

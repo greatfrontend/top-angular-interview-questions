@@ -1,0 +1,121 @@
+---
+title: What are template expressions and template statements?
+---
+
+## TL;DR
+
+In Angular templates, you use two main types of syntax to interact with your component's data and logic: template expressions and template statements.
+
+- **Template expressions** are used for data binding. They evaluate to a value and are typically used to display data (`{{ user.name }}`) or bind properties (`[src]="imageUrl"`). They are read-only and cannot change the state of the application directly (e.g., no assignments like `x = 1`).
+- **Template statements** are used for event binding. They execute code in response to an event (`(click)="saveData()"`). They can call component methods or perform simple assignments.
+
+---
+
+## Template expressions
+
+Template expressions are pieces of code within your Angular template that evaluate to a value. Angular executes these expressions and assigns the result to a binding target property.
+
+### Where they are used
+
+Template expressions are primarily used in:
+
+- **Interpolation:** Using double curly braces `{{ expression }}` to display a value in the HTML.
+- **Property binding:** Using square brackets `[targetProperty]="expression"` to bind a property of an HTML element or directive to the result of an expression.
+
+### Context of execution
+
+Template expressions are evaluated within the context of the component instance associated with the template. This means you can access properties and methods of that component directly within the expression.
+
+### Allowed syntax
+
+Template expressions support a subset of JavaScript syntax. You can use:
+
+- Property access (e.g., `user.name`)
+- Method calls (e.g., `getUserName()`)
+- Arithmetic operations (e.g., `price * quantity`)
+- String concatenation (e.g., `'Hello ' + name`)
+- Conditional (ternary) operator (e.g., `isLoggedIn ? 'Logout' : 'Login'`)
+- Nullish coalescing operator (e.g., `user.name ?? 'Guest'`)
+- Pipe operators (e.g., `date | date:'short'`)
+
+### Disallowed syntax
+
+Certain JavaScript syntax is explicitly disallowed in template expressions to prevent side effects and maintain readability. These include:
+
+- Assignments (`=`, `+=`, `-=`, etc.)
+- `new` operator
+- `typeof` operator
+- Increment and decrement operators (`++`, `--`)
+- Keywords like `let`, `const`, `var`, `await`
+- Chaining multiple expressions with semicolons (`;`)
+
+### Examples
+
+```html
+<!-- Interpolation -->
+<p>Welcome, {{ user.name }}!</p>
+<p>Total: {{ price * quantity | currency }}</p>
+
+<!-- Property Binding -->
+<img [src]="imageUrl" [alt]="imageAltText" />
+<button [disabled]="isSaving">Save</button>
+<div [class.active]="isActive"></div>
+```
+
+## Template statements
+
+Template statements are pieces of code within your Angular template that execute an action in response to an event.
+
+### Where they are used
+
+Template statements are primarily used in:
+
+- **Event binding:** Using parentheses `(targetEvent)="statement"` to respond to events emitted by HTML elements or directives.
+
+### Context of execution
+
+Like expressions, template statements are executed within the context of the component instance.
+
+### Allowed syntax
+
+Template statements are more permissive than expressions regarding side effects because their purpose is to change application state. You can use:
+
+- Method calls (e.g., `saveData()`, `deleteItem(item)`)
+- Assignments (e.g., `value = $event.target.value`)
+- Accessing event properties using the `$event` variable (e.g., `$event.target.value`)
+
+### Disallowed syntax
+
+Similar to expressions, certain complex or potentially harmful syntax is disallowed:
+
+- `new` operator
+- `typeof` operator
+- Increment and decrement operators (`++`, `--`)
+- Keywords like `let`, `const`, `var`, `await`
+- Chaining multiple statements with semicolons (`;`)
+
+### Examples
+
+```html
+<!-- Event Binding -->
+<button (click)="saveData()">Save</button>
+<input (input)="userName = $event.target.value" [value]="userName" />
+<form (submit)="onSubmit($event)">
+  <button type="submit">Submit</button>
+</form>
+```
+
+## Key differences
+
+The fundamental difference lies in their purpose and allowed operations:
+
+- **Purpose:** Expressions _evaluate_ to a value (read-only), statements _execute_ code (can have side effects).
+- **Usage:** Expressions are used for data binding (`{{}}`, `[]`), statements for event binding (`()`).
+- **Assignments:** Statements allow assignments (`=`), expressions do not.
+- **Method Calls:** Both allow method calls, but in different contexts (expressions use the return value, statements execute the method).
+
+## Further reading
+
+- [Angular Documentation: Template syntax](https://angular.dev/guide/templates/syntax)
+- [Angular Documentation: Template expressions](https://angular.dev/guide/templates/expressions)
+- [Angular Documentation: Template statements](https://angular.dev/guide/templates/statements)

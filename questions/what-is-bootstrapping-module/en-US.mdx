@@ -1,0 +1,100 @@
+---
+title: What is a bootstrapping module?
+---
+
+## TL;DR
+
+In Angular, the bootstrapping module is the root module of your application, typically named `AppModule`. It's the starting point that Angular uses to launch your application.
+
+It's configured using the `@NgModule` decorator and must include a `bootstrap` array within its metadata. This array lists the components that Angular should bootstrap when the module is bootstrapped. For the root module, this array usually contains just one component, the root component (e.g., `AppComponent`), which is the first component rendered in the browser's DOM.
+
+The actual bootstrapping process is initiated in the application's entry file, usually `main.ts`, by calling `platformBrowserDynamic().bootstrapModule(AppModule)`. This tells Angular to load and initialize the `AppModule` and then render the components listed in its `bootstrap` array.
+
+---
+
+## What is bootstrapping in Angular?
+
+Bootstrapping is the process of initializing and launching an Angular application. When you bootstrap an application, Angular performs several steps:
+
+### Loading the application's entry point
+
+The browser loads the `index.html` file, which typically includes a script tag pointing to the bundled JavaScript files of your Angular application.
+
+### Initializing the Angular environment
+
+The code in the application's entry file (usually `main.ts`) sets up the necessary environment for Angular to run.
+
+### Loading the root module
+
+Angular loads the specified root module, which contains the configuration for the entire application.
+
+### Creating the root component
+
+Based on the `bootstrap` array defined in the root module's `@NgModule` metadata, Angular creates and inserts the root component(s) into the DOM, typically within the `<app-root>` tag in `index.html`.
+
+### Starting change detection
+
+Angular begins its change detection cycle to render the initial view and respond to user interactions.
+
+## What is the bootstrapping module?
+
+The bootstrapping module is the main entry point for your Angular application's structure and configuration. By convention, this is usually named `AppModule`. It's the first module that Angular loads and processes to understand how to assemble and run the application.
+
+### Role of the bootstrapping module
+
+The bootstrapping module serves as the root of the module tree. It declares or imports all the necessary modules and components required to render the initial view of the application. It's responsible for:
+
+- Declaring the root component(s) that will be bootstrapped.
+- Importing other Angular modules (like `BrowserModule`, `FormsModule`, `HttpClientModule`) and feature modules.
+- Providing application-wide services.
+
+### Configuration using `@NgModule`
+
+The bootstrapping module is defined using the `@NgModule` decorator, just like any other Angular module. However, it has a special property: the `bootstrap` array.
+
+```typescript
+import { NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+
+import { AppComponent } from './app.component';
+
+@NgModule({
+  declarations: [AppComponent],
+  imports: [BrowserModule],
+  providers: [],
+  bootstrap: [AppComponent], // This array lists components to bootstrap
+})
+export class AppModule {}
+```
+
+The `bootstrap` array tells Angular which components should be created and inserted into the host web page (`index.html`) when this module is bootstrapped. For the root module, this is typically the main application component, often named `AppComponent`.
+
+## How is the bootstrapping module launched?
+
+The actual process of bootstrapping the root module happens in the application's main entry file, which is typically `src/main.ts`.
+
+### The `main.ts` file
+
+This file is the first code that runs when your application starts. It's responsible for setting up the Angular environment and initiating the bootstrapping process.
+
+```typescript
+import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
+
+import { AppModule } from './app/app.module'; // Import the root module
+
+platformBrowserDynamic()
+  .bootstrapModule(AppModule) // Bootstrap the root module
+  .catch(err => console.error(err));
+```
+
+### Using `platformBrowserDynamic`
+
+The `platformBrowserDynamic` function creates a platform instance for running Angular applications in a browser environment. The `.bootstrapModule(AppModule)` method is then called on this platform instance, passing the root module (`AppModule`) as an argument. This tells Angular to compile and launch the application starting with the specified module.
+
+_Note: Available from Angular 14 onwards, you can also bootstrap a standalone component directly using `bootstrapApplication(AppComponent)` in `main.ts`, bypassing the need for a root `@NgModule`. However, the question specifically asks about a "bootstrapping module"._
+
+## Further reading
+
+- [Angular Documentation: Bootstrapping](https://angular.dev/guide/bootstrapping)
+- [Angular Documentation: NgModules](https://angular.dev/guide/ngmodules)
+- [Angular Documentation: Standalone components, directives, and pipes](https://angular.dev/guide/standalone-components)

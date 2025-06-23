@@ -1,0 +1,132 @@
+---
+title: What are host bindings and host listeners?
+---
+
+## TL;DR
+
+Host bindings and host listeners are decorators used in Angular directives and components to interact directly with the host element, which is the element the directive or component is applied to.
+
+- `@HostBinding` allows you to bind a property of the host element (like `class`, `style`, `id`, `src`, etc.) to a property of your directive or component class. This is useful for dynamically changing the host element's appearance or attributes based on the component/directive's state.
+- `@HostListener` allows you to subscribe to events emitted by the host element (like `click`, `mouseover`, `keydown`, etc.) and execute a method in your directive or component class when that event occurs. This is useful for reacting to user interactions directly on the element.
+
+They provide a declarative way to manage interactions with the host element without needing to manually access the DOM.
+
+---
+
+## What are host bindings?
+
+Host bindings in Angular allow you to bind properties, attributes, or styles of the host element (the element the directive or component is attached to) to properties of your directive or component class. This is achieved using the `@HostBinding` decorator.
+
+### Purpose of host bindings
+
+The primary purpose is to dynamically update the host element's appearance or behavior based on the state of the directive or component. Instead of manually manipulating the DOM using `ElementRef`, `@HostBinding` provides a declarative and more Angular-idiomatic way to achieve this.
+
+### Using the `@HostBinding` decorator
+
+You apply the `@HostBinding` decorator to a property within your directive or component class. The decorator takes an argument, which is a string representing the host element property, attribute, or style you want to bind to.
+
+```typescript
+import { Directive, HostBinding, Input } from '@angular/core';
+
+@Directive({
+  selector: '[appHighlight]',
+})
+export class HighlightDirective {
+  @Input() defaultColor = 'yellow';
+  @Input('appHighlight') highlightColor = '';
+
+  @HostBinding('style.backgroundColor') backgroundColor: string;
+
+  ngOnInit() {
+    this.backgroundColor = this.highlightColor || this.defaultColor;
+  }
+}
+```
+
+In this example, the `backgroundColor` property of the directive class is bound to the `style.backgroundColor` property of the host element. When `this.backgroundColor` changes, Angular automatically updates the background color style of the element the `appHighlight` directive is applied to.
+
+### Binding to different host properties
+
+You can bind to various host properties:
+
+- **Attributes:** `@HostBinding('attr.role') role = 'button';`
+- **Classes:** `@HostBinding('class.active') isActive = true;` (Adds or removes the `active` class based on the boolean value)
+- **Styles:** `@HostBinding('style.width.px') width = 100;` (Binds a pixel value)
+- **Properties:** `@HostBinding('hidden') isHidden = false;`
+
+## What are host listeners?
+
+Host listeners in Angular allow you to subscribe to events emitted by the host element and execute a method in your directive or component class when that event occurs. This is achieved using the `@HostListener` decorator.
+
+### Purpose of host listeners
+
+The main purpose is to react to user interactions or other events occurring directly on the element where the directive or component is applied. Like `@HostBinding`, it offers a declarative way to handle host events without manual DOM event listeners.
+
+### Using the `@HostListener` decorator
+
+You apply the `@HostListener` decorator to a method within your directive or component class. The decorator takes the event name as the first argument (e.g., `'click'`, `'mouseover'`, `'keydown'`). Optionally, you can pass an array of arguments to extract from the event object (e.g., `['$event']`, `['$event.target']`).
+
+```typescript
+import { Directive, HostListener, ElementRef, Renderer2 } from '@angular/core';
+
+@Directive({
+  selector: '[appHoverEffect]',
+})
+export class HoverEffectDirective {
+  constructor(private el: ElementRef, private renderer: Renderer2) {}
+
+  @HostListener('mouseenter') onMouseEnter() {
+    this.renderer.setStyle(this.el.nativeElement, 'opacity', '0.8');
+  }
+
+  @HostListener('mouseleave') onMouseLeave() {
+    this.renderer.setStyle(this.el.nativeElement, 'opacity', '1');
+  }
+
+  @HostListener('click', ['$event']) onClick(event: Event) {
+    console.log('Host element clicked!', event);
+  }
+}
+```
+
+In this example, the `onMouseEnter` method is executed when the `mouseenter` event occurs on the host element, and `onMouseLeave` is executed on `mouseleave`. The `onClick` method is executed on a `click` event, and the `$event` object is passed as an argument to the method.
+
+### Listening to different host events
+
+You can listen to any standard DOM event or custom events emitted by the host element. Common examples include:
+
+- Mouse events: `'click'`, `'dblclick'`, `'mousedown'`, `'mouseup'`, `'mouseover'`, `'mouseout'`, `'mousemove'`
+- Keyboard events: `'keydown'`, `'keyup'`, `'keypress'`
+- Focus events: `'focus'`, `'blur'`
+- Input events: `'input'`, `'change'`
+
+## Why use host bindings and host listeners?
+
+Using `@HostBinding` and `@HostListener` offers several advantages:
+
+### Encapsulation
+
+They keep the logic for interacting with the host element contained within the directive or component class, improving code organization and maintainability.
+
+### Reusability
+
+They are essential for creating reusable attribute directives that modify the behavior or appearance of any element they are applied to (e.g., a tooltip directive, a drag-and-drop directive, a validation feedback directive).
+
+### Declarative syntax
+
+They provide a clean, declarative way to define how the directive or component interacts with its host element, making the code easier to read and understand compared to imperative DOM manipulation.
+
+### Performance
+
+Angular's change detection system is optimized to work with these decorators, potentially offering better performance than manual DOM manipulation in some cases.
+
+## Where are they used?
+
+While they can be used in both components and directives, they are most commonly found and particularly powerful in **attribute directives**. Directives are specifically designed to add behavior or modify the appearance of existing DOM elements, and `@HostBinding` and `@HostListener` are the primary tools for this interaction.
+
+In components, you often handle interactions with the component's _template_ elements using template bindings (`[property]`, `(event)`) rather than directly interacting with the component's host element itself, although using `@HostBinding` for setting host classes or styles based on component state is also common.
+
+## Further reading
+
+- [Angular Documentation: Host bindings](https://angular.dev/guide/components/host-bindings)
+- [Angular Documentation: Host listeners](https://angular.dev/guide/components/host-listeners)

@@ -1,0 +1,161 @@
+---
+title: How does Angular handle view encapsulation and what are the different strategies?
+---
+
+## TL;DR
+
+Angular's view encapsulation determines how the component's styles affect the rest of the application and vice versa. Its main purpose is to isolate component styles to prevent conflicts and make components reusable.
+
+There are three strategies:
+
+- `Emulated` (Default): Angular adds unique attributes to component's host element and its content, then scopes the CSS rules using these attributes. This prevents component styles from leaking out but allows global styles to affect the component.
+- `ShadowDom` (Available from Angular 6 onwards): Angular uses the browser's native Shadow DOM API to attach a shadow root to the component's host element. The component's template and styles are placed inside this shadow root, providing true style isolation.
+- `None`: No view encapsulation is applied. The component's styles become global styles, affecting the entire application.
+
+You configure the strategy using the `encapsulation` property in the `@Component` decorator, like `encapsulation: ViewEncapsulation.None`.
+
+---
+
+## What is view encapsulation?
+
+View encapsulation in Angular is a mechanism that controls how the styles defined within a component affect the rest of the application and how global styles or styles from other components affect the current component. It aims to isolate the component's styles, preventing them from "leaking" out and causing unintended side effects on other parts of the DOM, and also controlling how external styles penetrate the component's view.
+
+## Why is view encapsulation important?
+
+### Prevents style conflicts
+
+In large applications, different components might use the same CSS class names (e.g., `.title`, `.button`). Without encapsulation, styles defined in one component could unintentionally override styles in another, leading to unpredictable layouts and styling issues. Encapsulation ensures that a component's styles primarily apply only to its own template.
+
+### Improves component reusability
+
+By isolating styles, components become more self-contained. You can drop a component into different parts of your application or even into different applications without worrying that its styles will break the layout or that external styles will drastically alter its appearance.
+
+### Enhances maintainability
+
+When styles are encapsulated, debugging styling issues becomes easier. You know that a style problem within a component is most likely caused by the styles defined within that component itself, rather than a style rule coming from somewhere else in the application.
+
+## How Angular implements view encapsulation
+
+Angular achieves view encapsulation by processing the component's styles and applying them in a way that respects the chosen encapsulation strategy. The default and most common strategy, `Emulated`, involves Angular modifying both the component's CSS rules and the component's rendered HTML elements.
+
+## View encapsulation strategies
+
+Angular provides three strategies for view encapsulation, which you specify using the `ViewEncapsulation` enum from `@angular/core`.
+
+### `ViewEncapsulation.Emulated`
+
+- This is the **default** strategy if you don't specify one.
+- **How it works:** Angular processes the component's styles and adds unique, generated attributes to each CSS rule selector (e.g., `_ng-content-c1`, `_ng-host-c1`). It then adds corresponding attributes to the HTML elements rendered by the component's template and its host element. This effectively scopes the styles to only apply to elements within that specific component instance.
+- **Example:**
+  If you have a component with the following template and style:
+
+  ```html
+  <!-- my-component.component.html -->
+  <div class="my-class">Hello</div>
+  ```
+
+  ```css
+  /* my-component.component.css */
+  .my-class {
+    color: blue;
+  }
+  ```
+
+  With `Emulated` encapsulation, Angular might render it like this:
+
+  ```html
+  <!-- Rendered HTML -->
+  <my-component _ng-host-c1>
+    <div class="my-class" _ng-content-c1>Hello</div>
+  </my-component>
+  ```
+
+  And the CSS rule would be transformed to:
+
+  ```css
+  /* Transformed CSS */
+  .my-class[_ng-content-c1] {
+    color: blue;
+  }
+  ```
+
+- **Pros:**
+  - Works in all browsers because it relies on standard CSS and DOM attributes.
+  - Prevents component styles from affecting elements outside the component.
+- **Cons:**
+  - Global styles can still affect elements inside the component.
+  - Requires special syntax (`::ng-deep`, though deprecated) or workarounds to style elements within the component's view from a parent component or global styles.
+
+### `ViewEncapsulation.ShadowDom`
+
+- Available from Angular 6 onwards.
+- **How it works:** Angular uses the browser's native [Shadow DOM API](https://developer.mozilla.org/en-US/docs/Web/API/Shadow_DOM_API). It attaches a shadow root to the component's host element and places the component's template and styles inside this shadow root. Styles defined within the shadow root are truly isolated and do not leak out, nor do external styles penetrate the shadow boundary (except for inherited CSS properties like `color` or `font-family`, and CSS variables).
+- **Example:**
+  If you have the same component as above, with `ShadowDom` encapsulation, Angular might render it like this:
+
+  ```html
+  <!-- Rendered HTML -->
+  <my-component>
+    #shadow-root (open)
+    <style>
+      .my-class {
+        color: blue;
+      }
+    </style>
+    <div class="my-class">Hello</div>
+  </my-component>
+  ```
+
+- **Pros:**
+  - Provides true, native style isolation.
+  - Component styles do not leak out, and external styles (mostly) do not penetrate in.
+- **Cons:**
+  - Requires browser support for the Shadow DOM API (widely supported in modern browsers, but check specific requirements if targeting older versions).
+  - Styling elements inside the shadow root from outside the component is difficult and requires CSS custom properties (variables) or passing styles down.
+
+### `ViewEncapsulation.None`
+
+- **How it works:** Angular does not apply any encapsulation. The component's styles are simply added to the global styles of the application (typically within the `<head>` of the HTML document).
+- **Example:**
+  The CSS rule `.my-class { color: blue; }` would be added directly to the document's stylesheet without any modifications.
+- **Pros:**
+  - Useful for components that are intended to provide global styles or override styles elsewhere.
+  - Simplifies styling when encapsulation is not desired or causes issues.
+- **Cons:**
+  - High risk of style conflicts with other components or global styles.
+  - Breaks component reusability as its styles are not isolated.
+
+## Configuring encapsulation
+
+You set the encapsulation strategy using the `encapsulation` property within the `@Component` decorator:
+
+```typescript
+import { Component, ViewEncapsulation } from '@angular/core';
+
+@Component({
+  selector: 'app-my-component',
+  templateUrl: './my-component.component.html',
+  styleUrls: ['./my-component.component.css'],
+  // Set the encapsulation strategy
+  encapsulation: ViewEncapsulation.None, // or ViewEncapsulation.ShadowDom, or ViewEncapsulation.Emulated (default)
+})
+export class MyComponentComponent {
+  // ... component logic
+}
+```
+
+If you omit the `encapsulation` property, it defaults to `ViewEncapsulation.Emulated`.
+
+## Working with encapsulation challenges
+
+Sometimes you need to style elements within an encapsulated component from outside (e.g., from a parent component or global styles).
+
+- **`::ng-deep`:** This pseudo-class was historically used with `Emulated` encapsulation to force a style rule to penetrate the component's view. However, it is deprecated and its support is being phased out. It should be avoided in new code.
+- **Global styles:** Styles defined in the application's main style file (e.g., `styles.css`) or imported globally will affect components using `Emulated` or `None` encapsulation. They generally do not penetrate `ShadowDom`.
+- **CSS Custom Properties (Variables):** A recommended approach, especially with `ShadowDom`, is to use CSS variables. Define variables in the parent or global scope, and use them within the component's encapsulated styles.
+- **Multiple selectors:** For `Emulated` encapsulation, you can sometimes use a combination of selectors (e.g., targeting the host element from the parent and then a class inside the child) or rely on the fact that global styles _do_ affect the component's internals.
+
+## Further reading
+
+- [Angular Documentation: View Encapsulation](https://angular.dev/style-guide/component-styles#view-encapsulation)
+- [MDN Web Docs: Using Shadow DOM](https://developer.mozilla.org/en-US/docs/Web/API/Shadow_DOM_API/Using_shadow_DOM)

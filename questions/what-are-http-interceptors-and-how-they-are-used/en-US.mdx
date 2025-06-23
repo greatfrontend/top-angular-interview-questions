@@ -1,0 +1,195 @@
+---
+title: What are HTTP interceptors and how are they used?
+---
+
+## TL;DR
+
+HTTP interceptors in Angular are services that you can use to inspect and transform HTTP requests and responses before they are sent or processed. They provide a way to handle HTTP operations globally for your application.
+
+You can use them for common tasks like:
+
+- Adding authentication tokens to outgoing requests
+- Logging requests and responses
+- Handling errors centrally
+- Caching responses
+- Modifying request or response headers
+
+To create one, you implement the `HttpInterceptor` interface and provide it using the `HTTP_INTERCEPTORS` injection token with `multi: true`.
+
+```typescript
+import { Injectable } from '@angular/core';
+import {
+  HttpInterceptor,
+  HttpRequest,
+  HttpHandler,
+  HttpEvent,
+} from '@angular/common/http';
+import { Observable } from 'rxjs';
+
+@Injectable()
+export class AuthInterceptor implements HttpInterceptor {
+  intercept(
+    req: HttpRequest<any>,
+    next: HttpHandler
+  ): Observable<HttpEvent<any>> {
+    // Clone the request and add a header
+    const authReq = req.clone({
+      headers: req.headers.set('Authorization', 'Bearer my-auth-token'),
+    });
+
+    // Pass the cloned request to the next handler
+    return next.handle(authReq);
+  }
+}
+```
+
+Then, register it in your module's providers:
+
+```typescript
+import { HTTP_INTERCEPTORS } from '@angular/common/http';
+import { AuthInterceptor } from './auth.interceptor';
+
+// ... in your @NgModule decorator
+providers: [
+  { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
+];
+```
+
+---
+
+## What are HTTP interceptors?
+
+HTTP interceptors are a feature of Angular's `HttpClient` module that allow you to intercept incoming and outgoing HTTP requests and responses. They are services that implement the `HttpInterceptor` interface.
+
+## Why use HTTP interceptors?
+
+Using HTTP interceptors provides several benefits:
+
+### Centralized logic
+
+They allow you to centralize common tasks related to HTTP requests and responses, such as authentication, logging, or error handling, instead of repeating the code in every service that makes HTTP calls
+
+### Reduced boilerplate
+
+By handling cross-cutting concerns in interceptors, you reduce the amount of repetitive code needed in your application's services and components
+
+### Modularity and maintainability
+
+Interceptors make your code more modular and easier to maintain. Changes to how you handle authentication or errors, for example, only need to be made in one place
+
+## How do they work?
+
+When you make an HTTP request using `HttpClient`, the request goes through a chain of interceptors before reaching the backend. Similarly, the response from the backend travels back through the same chain of interceptors before reaching the component or service that subscribed to the request.
+
+Each interceptor's `intercept` method receives the request and a `HttpHandler`. The handler represents the next interceptor in the chain (or the backend itself if it's the last interceptor). The interceptor can inspect, modify, or even replace the request before passing it to the next handler using `next.handle(modifiedReq)`. It then returns an `Observable` of `HttpEvent`s, which represents the response stream coming back through the chain.
+
+## Common use cases
+
+HTTP interceptors are useful for a variety of tasks:
+
+### Adding authentication headers
+
+Automatically attach authentication tokens (like JWTs) to outgoing requests
+
+### Logging
+
+Log details about requests and responses for debugging or monitoring
+
+### Error handling
+
+Catch and handle specific HTTP error statuses globally, such as redirecting to a login page on a 401 Unauthorized error or showing a generic error message on a 500 Internal Server Error
+
+### Caching
+
+Implement custom caching strategies for HTTP responses
+
+### Modifying URLs or headers
+
+Dynamically change request URLs or add/modify other headers based on certain conditions
+
+### Loading indicators
+
+Show and hide a global loading spinner or progress bar based on active HTTP requests
+
+## Creating a custom interceptor
+
+To create a custom interceptor, you need to create a service that implements the `HttpInterceptor` interface.
+
+```typescript
+import { Injectable } from '@angular/core';
+import {
+  HttpInterceptor,
+  HttpRequest,
+  HttpHandler,
+  HttpEvent,
+  HttpErrorResponse,
+} from '@angular/common/http';
+import { Observable, throwError } from 'rxjs';
+import { catchError } from 'rxjs/operators';
+
+@Injectable()
+export class ErrorInterceptor implements HttpInterceptor {
+  intercept(
+    req: HttpRequest<any>,
+    next: HttpHandler
+  ): Observable<HttpEvent<any>> {
+    return next.handle(req).pipe(
+      catchError((error: HttpErrorResponse) => {
+        let errorMessage = '';
+        if (error.error instanceof ErrorEvent) {
+          // Client-side error
+          errorMessage = `Error: ${error.error.message}`;
+        } else {
+          // Server-side error
+          errorMessage = `Error Code: ${error.status}\nMessage: ${error.message}`;
+        }
+        console.error(errorMessage);
+        // Optionally, show a user-friendly message or redirect
+        // this.errorService.showError(errorMessage);
+        return throwError(() => new Error(errorMessage));
+      })
+    );
+  }
+}
+```
+
+In this example, the interceptor catches errors from the response stream and logs them before re-throwing the error.
+
+## Registering an interceptor
+
+Once you have created an interceptor service, you need to provide it in your application's root module (`AppModule`) or a feature module where you want it to be active. You use the `HTTP_INTERCEPTORS` injection token and set `multi: true`.
+
+```typescript
+import { NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
+
+import { AppComponent } from './app.component';
+import { AuthInterceptor } from './auth.interceptor'; // Assuming you created this
+import { ErrorInterceptor } from './error.interceptor'; // Assuming you created this
+
+@NgModule({
+  declarations: [
+    AppComponent,
+    // ... other components
+  ],
+  imports: [
+    BrowserModule,
+    HttpClientModule,
+    // ... other modules
+  ],
+  providers: [
+    { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
+    { provide: HTTP_INTERCEPTORS, useClass: ErrorInterceptor, multi: true },
+    // ... other services
+  ],
+  bootstrap: [AppComponent],
+})
+export class AppModule {}
+```
+
+The `multi: true` option is crucial because it tells Angular that `HTTP_INTERCEPTORS` is a multi-provider token, allowing multiple interceptors to be registered. Angular will then create an array of interceptors and run requests through them in the order they are provided.
+
+## Further reading
+
+- [Angular Documentation on HTTP Interceptors](https://angular.dev/guide/http/interceptors)

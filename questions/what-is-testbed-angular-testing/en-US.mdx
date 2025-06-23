@@ -1,0 +1,150 @@
+---
+title: What is TestBed and how is it used in Angular testing?
+---
+
+## TL;DR
+
+`TestBed` is the primary utility in Angular's `@angular/core/testing` module used to configure and create a testing module environment. It allows you to set up the necessary components, services, imports, and providers required to test a specific part of your Angular application, such as a component or a service, in isolation or with controlled dependencies.
+
+You typically use `TestBed` within a `beforeEach` block in your test file to:
+
+- Configure a testing module using `TestBed.configureTestingModule({...})`, similar to defining an `@NgModule`.
+- Create instances of components using `TestBed.createComponent(YourComponent)`.
+- Get instances of services or other injectables using `TestBed.inject(YourService)`.
+
+This setup ensures that the dependencies are correctly resolved and the Angular environment is ready for testing.
+
+---
+
+## What is TestBed?
+
+`TestBed` is a core utility provided by Angular's `@angular/core/testing` package. Its main purpose is to create a dynamic testing module environment that closely mimics a real Angular module (`@NgModule`). This environment is essential for testing Angular artifacts like components, services, directives, and pipes because they often rely on Angular's dependency injection system and template compilation.
+
+## Purpose of TestBed
+
+The primary purpose of `TestBed` is to:
+
+### Set up a testing module
+
+It allows you to define a testing module using `configureTestingModule` where you declare the components, directives, and pipes under test, import necessary Angular modules (like `FormsModule`, `HttpClientTestingModule`, `RouterTestingModule`), and provide mock or real services.
+
+### Resolve dependencies
+
+Within the configured testing module, `TestBed` handles dependency injection, allowing you to inject services into your components or test instances of services with their own dependencies resolved.
+
+### Create component instances
+
+It provides the `createComponent` method to instantiate a component within the testing environment, including compiling its template and setting up change detection.
+
+### Get service instances
+
+It provides the `inject` method to retrieve instances of services or other injectables configured in the testing module.
+
+## How is TestBed used?
+
+`TestBed` is typically used within the setup phase of your tests, often inside a `beforeEach` block, to configure the testing environment before each test runs.
+
+### Configuring the testing module
+
+You use `TestBed.configureTestingModule()` to define the testing module. This method takes a configuration object similar to the one used for `@NgModule`:
+
+```typescript
+import { TestBed } from '@angular/core/testing';
+import { YourComponent } from './your.component';
+import { YourService } from './your.service';
+import { CommonModule } from '@angular/common';
+
+describe('YourComponent', () => {
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [YourComponent], // Declare the component under test
+      imports: [CommonModule], // Import necessary modules
+      providers: [YourService], // Provide services
+    }).compileComponents(); // Optional: Compile component templates (often not needed with modern build tools)
+  });
+
+  // ... tests go here
+});
+```
+
+- `declarations`: Array of components, directives, and pipes that belong to this testing module.
+- `imports`: Array of modules whose exported declarables and providers are available to this testing module.
+- `providers`: Array of services and other injectable values available via dependency injection.
+- `schemas`: Array of schema types (e.g., `NO_ERRORS_SCHEMA`) to allow unknown elements or attributes in templates.
+- `compileComponents()`: This method is needed when testing components with external templates or stylesheets if you are using the JIT compiler in your test environment. Modern Angular CLI setups often use the AOT compiler for tests, making this call unnecessary, but it's good practice to include it or be aware of its purpose. It returns a promise, so `beforeEach` is often marked as `async`.
+
+### Creating component instances
+
+After configuring the module, you can create an instance of the component under test using `TestBed.createComponent()`:
+
+```typescript
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { YourComponent } from './your.component';
+
+describe('YourComponent', () => {
+  let fixture: ComponentFixture<YourComponent>;
+  let component: YourComponent;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [YourComponent],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(YourComponent);
+    component = fixture.componentInstance; // Get the component instance
+    fixture.detectChanges(); // Trigger initial data binding
+  });
+
+  it('should create the component', () => {
+    expect(component).toBeTruthy();
+  });
+
+  // ... more tests
+});
+```
+
+`TestBed.createComponent()` returns a `ComponentFixture`, which is a test harness for interacting with the component's instance (`fixture.componentInstance`) and its DOM element (`fixture.nativeElement` or `fixture.debugElement`). `fixture.detectChanges()` is crucial for triggering Angular's change detection cycle, which updates the view based on the component's state.
+
+### Getting service instances
+
+You can retrieve instances of services or other injectables configured in the testing module using `TestBed.inject()`:
+
+```typescript
+import { TestBed } from '@angular/core/testing';
+import { YourService } from './your.service';
+
+describe('YourService', () => {
+  let service: YourService;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [YourService], // Provide the service
+    });
+    service = TestBed.inject(YourService); // Get the service instance
+  });
+
+  it('should be created', () => {
+    expect(service).toBeTruthy();
+  });
+
+  // ... more tests
+});
+```
+
+`TestBed.inject()` is the modern way to get injectables. Previously, `TestBed.get()` was used, but `inject` is preferred from Angular 9 onwards.
+
+## Why use TestBed?
+
+You need `TestBed` because simply creating an instance of a component or service using `new YourComponent()` or `new YourService()` is often insufficient for testing in Angular.
+
+- **Dependency Injection:** Angular components and services typically rely on dependency injection to get their dependencies. Instantiating them directly bypasses this system, leading to errors if dependencies are expected in the constructor. `TestBed` sets up the injector.
+- **Template Compilation:** Components have associated templates. `TestBed.createComponent` handles the compilation and rendering of the component's template within the test environment, allowing you to test the interaction between the component class and its view.
+- **Angular Lifecycle:** `TestBed` helps manage the Angular lifecycle hooks (like `ngOnInit`, `ngOnDestroy`) and change detection within the test context.
+
+In essence, `TestBed` provides the necessary Angular runtime environment to test Angular-specific features correctly.
+
+## Further reading
+
+- [Angular Testing Guide: TestBed](https://angular.dev/guide/testing/testbed)
+- [Angular Testing Guide: Component Testing Basics](https://angular.dev/guide/testing/components-basics)
+- [Angular Testing Guide: Service Testing](https://angular.dev/guide/testing/services)

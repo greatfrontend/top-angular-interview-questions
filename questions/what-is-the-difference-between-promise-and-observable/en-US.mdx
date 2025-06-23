@@ -1,0 +1,151 @@
+---
+title: What is the difference between Promise and Observable?
+---
+
+## TL;DR
+
+Promises and Observables are both used for handling asynchronous operations in JavaScript and Angular, but they differ in several key ways:
+
+- **Value Emission:** A Promise emits a single value (either a resolved value or an error) and then completes. An Observable can emit _multiple_ values over time (a stream of data) and can also complete or error.
+- **Execution:** Promises are _eager_. The asynchronous operation starts as soon as the Promise is created. Observables are _lazy_. The operation doesn't start until you `subscribe()` to it.
+- **Cancellability:** Promises are _not cancellable_. Once the operation starts, you cannot stop it. Observables _are cancellable_. You can stop the operation at any time by calling `unsubscribe()`.
+- **Operators:** Promises have limited built-in methods (`.then()`, `.catch()`, `.finally()`). Observables come with a rich set of operators (from RxJS) for transforming, filtering, and combining data streams (like `map`, `filter`, `debounceTime`).
+- **Error Handling:** Promises handle errors with a single `.catch()` block. Observables handle errors within the stream using operators like `catchError`, allowing for more flexible error recovery or retry strategies.
+
+In Angular, Observables are widely used for handling asynchronous events like HTTP requests, router events, and form changes because of their ability to handle multiple values, cancellability, and powerful operators.
+
+---
+
+## What is a Promise?
+
+A Promise is an object representing the eventual completion (or failure) of an asynchronous operation and its resulting value.
+
+### Single value
+
+A Promise can only emit a single value: either the resolved value upon success or an error upon failure. Once it settles (either resolves or rejects), it cannot change its state or emit further values.
+
+### Eager execution
+
+Promises are eager. The asynchronous operation associated with a Promise starts executing as soon as the Promise is created, regardless of whether `.then()` or `.catch()` handlers are attached.
+
+### Not cancellable
+
+Once a Promise-based operation begins, there is no built-in way to cancel it. You have to wait for it to complete or fail.
+
+### Limited methods
+
+Promises have a limited set of methods for handling the result: `.then()` for success, `.catch()` for failure, and `.finally()` which runs regardless of the outcome.
+
+### Example
+
+```typescript
+function fetchDataPromise(): Promise<string> {
+  return new Promise((resolve, reject) => {
+    // Simulate an async operation
+    setTimeout(() => {
+      const success = true; // Change to false to simulate error
+      if (success) {
+        resolve('Data fetched successfully!');
+      } else {
+        reject('Failed to fetch data.');
+      }
+    }, 1000);
+  });
+}
+
+// The operation starts immediately when fetchDataPromise() is called
+fetchDataPromise()
+  .then(data => console.log('Promise resolved:', data))
+  .catch(error => console.error('Promise rejected:', error));
+```
+
+## What is an Observable?
+
+An Observable represents a stream of data or events that can be emitted over time. It's a concept from Reactive Programming, often implemented in JavaScript using the RxJS library.
+
+### Multiple values
+
+An Observable can emit zero, one, or multiple values over time. It can also signal completion or an error. This makes them suitable for handling sequences of events like user input, HTTP responses (in some cases, like polling), or real-time data streams.
+
+### Lazy execution
+
+Observables are lazy. The code inside an Observable's creation function does not execute until a consumer `subscribe()`s to it. Each subscription typically triggers a new execution of the Observable's logic.
+
+### Cancellable
+
+Observables are cancellable. When you `subscribe()` to an Observable, you get a `Subscription` object. Calling `unsubscribe()` on this object cleans up resources and stops the Observable from emitting further values and the underlying operation (if it supports cancellation, like Angular's `HttpClient`).
+
+### Rich operators
+
+Observables, especially with RxJS, come with a vast collection of operators (`map`, `filter`, `debounceTime`, `switchMap`, `mergeMap`, etc.) that allow you to transform, combine, and manipulate the data stream in powerful ways.
+
+### Example
+
+```typescript
+import { Observable, of } from 'rxjs';
+import { map } from 'rxjs/operators';
+
+function fetchDataObservable(): Observable<string> {
+  // Simulate an async operation emitting a value
+  return of('Initial data').pipe(map(data => data + ' processed!'));
+}
+
+// The operation starts only when subscribe() is called
+const subscription = fetchDataObservable().subscribe({
+  next: data => console.log('Observable emitted:', data),
+  error: error => console.error('Observable error:', error),
+  complete: () => console.log('Observable completed.'),
+});
+
+// To stop receiving values and clean up:
+// subscription.unsubscribe();
+```
+
+## Key Differences Summarized
+
+### Single vs multiple values
+
+- **Promise:** Emits a single value or an error, then completes.
+- **Observable:** Can emit multiple values over time, then optionally completes or errors.
+
+### Eager vs lazy execution
+
+- **Promise:** Eager; execution starts when the Promise is created.
+- **Observable:** Lazy; execution starts only when `subscribe()` is called.
+
+### Cancellability
+
+- **Promise:** Not cancellable.
+- **Observable:** Cancellable via `unsubscribe()`.
+
+### Operators and transformations
+
+- **Promise:** Limited built-in methods (`.then()`, `.catch()`).
+- **Observable:** Rich ecosystem of RxJS operators for transforming and combining streams.
+
+### Error handling
+
+- **Promise:** Single `.catch()` for the final error.
+- **Observable:** Errors can be handled within the stream using operators (`catchError`), potentially allowing recovery or retries without terminating the stream (though default behavior is often termination).
+
+### Subscription model
+
+- **Promise:** No explicit subscription; handlers are attached directly.
+- **Observable:** Requires `subscribe()` to start execution and receive values.
+
+## Angular Context
+
+Angular heavily utilizes Observables, particularly in:
+
+- **`HttpClient`:** Methods like `get`, `post`, etc., return Observables. This allows you to easily cancel requests (`unsubscribe()`) and use RxJS operators to transform responses.
+- **Router:** Events like `NavigationStart`, `params`, `queryParams` are exposed as Observables.
+- **Forms:** `valueChanges` and `statusChanges` on form controls and groups are Observables.
+- **Event Handling:** You can create Observables from DOM events.
+
+While Promises can be used in Angular, Observables are often preferred for their flexibility, cancellability, and the power of RxJS operators, which align well with the reactive patterns used throughout the framework.
+
+## Further reading
+
+- [Angular Documentation: Observables](https://angular.dev/guide/observables)
+- [RxJS Documentation](https://rxjs.dev/guide/overview)
+- [MDN Web Docs: Promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)

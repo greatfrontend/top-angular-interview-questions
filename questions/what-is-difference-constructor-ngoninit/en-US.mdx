@@ -1,0 +1,118 @@
+---
+title: What is the difference between `constructor` and `ngOnInit()`?
+---
+
+## TL;DR
+
+The `constructor` is a standard TypeScript/JavaScript class feature used to initialize class members and perform dependency injection in Angular. It runs first when an instance of the class is created.
+
+`ngOnInit` is an Angular lifecycle hook that runs _after_ the constructor and _after_ Angular has initialized all data-bound properties (like `@Input()`s). It's the recommended place for most initialization logic in Angular components and services, such as fetching initial data or setting up subscriptions, because you can be sure that inputs are available.
+
+In short:
+
+- `constructor`: Basic class setup, dependency injection
+- `ngOnInit`: Angular-specific initialization, access to inputs
+
+The order is always `constructor` -> `ngOnInit`.
+
+```typescript
+import { Component, OnInit, Input } from '@angular/core';
+
+@Component({
+  selector: 'app-example',
+  template: '<p>{{ message }}</p>',
+})
+export class ExampleComponent implements OnInit {
+  @Input() initialMessage: string = '';
+  message: string = '';
+
+  constructor() {
+    console.log('Constructor called');
+    // initialMessage is NOT guaranteed to be available here
+    console.log('initialMessage in constructor:', this.initialMessage); // Might be undefined
+  }
+
+  ngOnInit() {
+    console.log('ngOnInit called');
+    // initialMessage IS guaranteed to be available here
+    console.log('initialMessage in ngOnInit:', this.initialMessage); // Will have the input value
+    this.message = this.initialMessage || 'Default message';
+  }
+}
+```
+
+---
+
+## Constructor
+
+The `constructor` is a fundamental feature of TypeScript and JavaScript classes. Its primary purpose is to create and initialize an object created with a class.
+
+### Purpose in Angular
+
+In the context of Angular, the `constructor` is primarily used for:
+
+- **Dependency Injection:** This is the most common use case. You declare the services or dependencies your component or service needs as parameters in the constructor, and Angular's injector provides instances of these dependencies.
+- **Basic Initialization:** You can perform simple assignments to class properties within the constructor.
+
+### What to avoid in the constructor
+
+It's generally recommended to avoid complex logic, side effects, or operations that depend on Angular's data-bound properties (like `@Input()`s) within the constructor. This is because the constructor runs before Angular has processed inputs or performed change detection.
+
+## ngOnInit()
+
+`ngOnInit()` is a lifecycle hook provided by Angular. It's part of the `OnInit` interface.
+
+### Purpose
+
+`ngOnInit()` is called by Angular after the component's or directive's data-bound properties have been initialized and checked for the first time. It's the standard place to put initialization logic that requires the component's inputs to be available.
+
+### Common uses for ngOnInit
+
+- Fetching data from a service to display in the component.
+- Setting up subscriptions to Observables.
+- Performing complex setup or calculations that depend on input properties.
+- Initializing component state based on inputs.
+
+### Implementing ngOnInit
+
+To use `ngOnInit`, your component or directive class should implement the `OnInit` interface and define the `ngOnInit()` method.
+
+```typescript
+import { Component, OnInit } from '@angular/core';
+
+@Component({
+  selector: 'app-my-component',
+  template: '<p>Component initialized</p>',
+})
+export class MyComponent implements OnInit {
+  constructor() {
+    // Constructor logic (e.g., dependency injection)
+  }
+
+  ngOnInit() {
+    // Initialization logic that runs after inputs are available
+    console.log('Component initialized successfully');
+  }
+}
+```
+
+## Order of execution
+
+The `constructor` is always called first when an instance of the class is created. After the constructor finishes and Angular has processed the component's inputs, the `ngOnInit()` lifecycle hook is called.
+
+The sequence is:
+
+1.  Class instance created, `constructor` is called.
+2.  Angular initializes data-bound input properties (`@Input()`).
+3.  `ngOnInit()` is called.
+
+## Why prefer ngOnInit for Angular logic
+
+The main reason to prefer `ngOnInit()` for most Angular-specific initialization logic is that it guarantees that your component's `@Input()` properties have been set by Angular. If you try to access input properties in the `constructor`, they might still have their initial default values (or be `undefined`) because Angular hasn't finished setting them up yet.
+
+Using `ngOnInit()` ensures that you are working with the actual values passed into the component.
+
+## Further reading
+
+- [Angular Lifecycle Hooks](https://angular.dev/guide/components/lifecycle)
+- [Angular Dependency Injection](https://angular.dev/guide/di)

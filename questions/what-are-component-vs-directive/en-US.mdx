@@ -1,0 +1,131 @@
+---
+title: What are the differences between component and directive?
+---
+
+## TL;DR
+
+In Angular, both components and directives are classes decorated with metadata that interact with the DOM. The key difference is their purpose and structure.
+
+- A **component** is a special type of directive that _always_ has a template. It's used to create reusable UI blocks with their own view, logic, and encapsulated styles. You declare it using the `@Component` decorator.
+- A **directive** modifies the behavior or appearance of an _existing_ DOM element, component, or another directive. It does _not_ have a template or encapsulated styles of its own. You declare it using the `@Directive` decorator.
+
+Think of components as building blocks for your UI, while directives are tools to enhance or change those blocks or other elements.
+
+---
+
+## What is a component?
+
+A component is the most fundamental building block in an Angular application. It controls a patch of the screen called a view.
+
+### Components are directives with templates
+
+Technically, a component is a type of directive, but with a template. Every component must be associated with a template that defines its view.
+
+### Components have encapsulated styles
+
+Components can define their own styles that are typically scoped only to the elements within their template, preventing style conflicts with other parts of the application.
+
+### Components have a view and logic
+
+A component class contains the logic (data and methods) that drives the view defined in its template.
+
+### Declared with `@Component` decorator
+
+Components are defined using the `@Component` decorator, which provides metadata like `selector`, `templateUrl` or `template`, and `styleUrls` or `styles`.
+
+```typescript
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-my-component',
+  templateUrl: './my-component.component.html',
+  styleUrls: ['./my-component.component.css'],
+})
+export class MyComponent {
+  // Component logic
+  title = 'Hello from Component';
+}
+```
+
+### Used as custom HTML elements
+
+Components are typically used in templates as custom HTML element tags based on their `selector`.
+
+```html
+<app-my-component></app-my-component>
+```
+
+## What is a directive?
+
+A directive is a class that modifies the behavior or appearance of a DOM element, component, or another directive.
+
+### Directives do not have templates
+
+Unlike components, directives do not have an associated template or view of their own. They operate on existing elements.
+
+### Directives do not have encapsulated styles
+
+Directives cannot define encapsulated styles. If they need to apply styles, they typically do so by manipulating the host element's style or class properties programmatically.
+
+### Declared with `@Directive` decorator
+
+Directives are defined using the `@Directive` decorator, which provides metadata, most importantly the `selector`.
+
+```typescript
+import { Directive, ElementRef, HostListener } from '@angular/core';
+
+@Directive({
+  selector: '[appHighlight]', // Attribute selector
+})
+export class HighlightDirective {
+  constructor(private el: ElementRef) {}
+
+  @HostListener('mouseenter') onMouseEnter() {
+    this.highlight('yellow');
+  }
+
+  @HostListener('mouseleave') onMouseLeave() {
+    this.highlight('');
+  }
+
+  private highlight(color: string) {
+    this.el.nativeElement.style.backgroundColor = color;
+  }
+}
+```
+
+### Used as attributes or structural prefixes
+
+Directives are applied to elements in templates, usually as attributes (attribute directives) or with a prefix like `*` (structural directives).
+
+```html
+<p appHighlight>This text will be highlighted.</p>
+
+<div *ngIf="isVisible">This div is shown conditionally.</div>
+```
+
+### Types of directives
+
+Angular has three types of directives:
+
+- **Components:** Directives with a template (as discussed above).
+- **Attribute directives:** Change the appearance or behavior of an element, component, or another directive. Examples include `NgStyle`, `NgClass`, and custom directives like `appHighlight`.
+- **Structural directives:** Change the DOM layout by adding, removing, or manipulating elements. Examples include `NgIf`, `NgFor`, and `NgSwitch`. They are often prefixed with `*`.
+
+## Key differences summarized
+
+| Feature           | Component                                | Directive                                                            |
+| :---------------- | :--------------------------------------- | :------------------------------------------------------------------- |
+| **Purpose**       | Create reusable UI blocks with a view    | Modify existing elements/components/directives                       |
+| **Template**      | Yes, required                            | No                                                                   |
+| **Styles**        | Yes, encapsulated styles                 | No (modifies host styles programmatically)                           |
+| **Decorator**     | `@Component`                             | `@Directive`                                                         |
+| **Usage in HTML** | As an element tag (`<app-my-component>`) | As an attribute (`<div myDirective>`) or structural prefix (`*ngIf`) |
+| **DOM Impact**    | Creates a new element with its view      | Modifies an existing element or its structure                        |
+
+## Further reading
+
+- [Angular Documentation: Components](https://angular.dev/guide/components)
+- [Angular Documentation: Directives](https://angular.dev/guide/directives)
+- [Angular Documentation: Attribute Directives](https://angular.dev/guide/attribute-directives)
+- [Angular Documentation: Structural Directives](https://angular.dev/guide/structural-directives)

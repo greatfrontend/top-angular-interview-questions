@@ -1,0 +1,100 @@
+---
+title: What is a service worker and its role in Angular?
+---
+
+## TL;DR
+
+A service worker is a script that your browser runs in the background, separate from the main browser thread. It acts as a programmable network proxy, intercepting network requests from your web application.
+
+In Angular, service workers are primarily used to turn your application into a Progressive Web App (PWA). They enable features like:
+
+- **Caching:** Caching application assets (like HTML, CSS, JavaScript, images) and potentially API data, allowing for faster loading on repeat visits and offline access
+- **Offline support:** Serving cached content when the network is unavailable
+- **Push notifications:** Receiving push messages from a server (though Angular's built-in service worker mainly focuses on caching)
+- **Background sync:** Deferring actions until the user has a stable connection
+
+Angular provides the `@angular/pwa` package and the `ng add @angular/pwa` command to easily integrate a service worker into your project, automating the setup and configuration needed for caching.
+
+---
+
+## What is a service worker?
+
+A service worker is a type of web worker, essentially a JavaScript file that runs in the background, separate from the main browser thread and the web page itself. It cannot access the DOM directly but can communicate with the pages it controls via the `postMessage` API.
+
+Its key characteristic is its ability to intercept network requests made by the pages it controls. This allows it to programmatically manage responses, serving content from a cache, fetching from the network, or a combination of both.
+
+Service workers have a lifecycle independent of the web page, including `install` and `activate` events. They are designed to be resilient to network failures and can even be woken up by events like push notifications or background sync requests when the browser is closed.
+
+## Role in Angular applications
+
+In Angular, service workers are primarily used to enhance the application's reliability and performance, transforming it into a Progressive Web App (PWA). The main benefits they provide in an Angular context are related to caching and offline capabilities.
+
+### Caching application assets
+
+The Angular service worker intercepts network requests for application files (HTML, CSS, JavaScript bundles, assets like images and fonts). It uses a caching strategy defined in a configuration file (`ngsw-config.json`) to decide whether to serve these files from the cache or fetch them from the network. This significantly speeds up load times on subsequent visits.
+
+### Providing offline support
+
+By caching the necessary application files (often referred to as the "app shell"), the Angular service worker allows the application to load and function even when the user is offline. When a network request fails, the service worker can serve the cached version of the resource, providing a seamless experience or at least a functional offline mode.
+
+### Enabling PWA features
+
+The caching and offline capabilities provided by the service worker are fundamental requirements for a web application to be considered a PWA. Integrating a service worker is a key step in making an Angular app installable and reliable.
+
+### Handling updates
+
+The Angular service worker is designed to handle application updates efficiently. When a new version of the application is deployed, the service worker downloads the new files in the background. It activates the new version only when the user navigates to a new page or reloads the application, ensuring that the user doesn't see a mix of old and new files.
+
+## Angular's service worker integration
+
+Angular provides built-in support for adding service workers to your application through the `@angular/pwa` package.
+
+### Adding the service worker
+
+You can add the service worker to an existing Angular project using the Angular CLI command:
+
+```bash
+ng add @angular/pwa
+```
+
+This command automatically:
+
+- Adds the `@angular/service-worker` package to your project
+- Enables service worker support in the `angular.json` build configuration
+- Creates a default `ngsw-config.json` file in the project root
+- Adds necessary meta tags and link tags to `index.html`
+- Adds basic PWA icons
+
+### Configuration with `ngsw-config.json`
+
+The `ng add @angular/pwa` command generates a default `ngsw-config.json` file. This JSON file is used to configure the Angular service worker's behavior, specifying which files to cache, which caching strategies to use, and how to handle updates.
+
+Key sections in `ngsw-config.json` include:
+
+- `index`: Specifies the main application entry point (usually `index.html`)
+- `assetGroups`: Defines groups of static assets (like CSS, JS bundles, images, fonts) and their caching strategies (`installMode`, `updateMode`)
+- `dataGroups`: Defines groups of data requests (like API calls) and their caching strategies (`url`, `cacheConfig`)
+
+### Build process
+
+When you build your Angular application for production using `ng build --configuration production`, the Angular CLI processes the `ngsw-config.json` file and generates a service worker manifest file named `ngsw.json` in the output directory. This manifest contains a list of all cached resources and their hashes.
+
+The build process also includes the Angular service worker script (`ngsw-worker.js`) in the output.
+
+### How it works at runtime
+
+When a user visits your application:
+
+1.  The browser loads `index.html`.
+2.  The script in `index.html` registers the `ngsw-worker.js` file as the service worker.
+3.  The browser installs the service worker. During installation, the service worker downloads and caches the files listed in the `ngsw.json` manifest according to the `installMode` specified in `ngsw-config.json`.
+4.  Once installed and activated, the service worker intercepts all subsequent network requests from your application.
+5.  For each request, it consults the `ngsw.json` manifest and the rules defined by `assetGroups` and `dataGroups` to decide whether to serve the response from its cache or fetch it from the network.
+
+This process ensures that the application loads quickly and reliably, even in poor network conditions or offline.
+
+## Further reading
+
+- [Angular documentation on Service Workers and PWAs](https://angular.dev/tools/cli/pwa)
+- [Introduction to Service Workers (MDN Web Docs)](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API/Using_Service_Workers)
+- [Progressive Web Apps (web.dev)](https://web.dev/progressive-web-apps/)

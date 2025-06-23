@@ -1,0 +1,125 @@
+---
+title: What are signals and why is it introduced?
+---
+
+## TL;DR
+
+Signals, available from Angular 16 onwards, are a new reactive primitive that provide a way to manage state changes in a more explicit and efficient manner. They are simple wrappers around values that notify interested consumers when the value changes.
+
+The primary reasons for introducing signals are:
+
+- **Simplifying change detection**: Signals enable fine-grained reactivity, allowing Angular to update only the specific parts of the UI that depend on a changed signal, rather than potentially checking the entire component tree via Zone.js.
+- **Improving performance**: By reducing the amount of work needed for change detection, signals can significantly improve application performance, especially in complex applications. They also pave the way for potential future zoneless applications.
+- **Enhancing developer experience**: Signals make reactivity more explicit and easier to reason about, providing a simpler mental model for state management compared to traditional methods.
+
+---
+
+## What are signals?
+
+Signals are a reactive primitive introduced in Angular 16. They are functions that wrap a value and can notify interested consumers when that value changes. This provides a simple, explicit, and efficient way to manage state and dependencies within an Angular application.
+
+### Core concepts
+
+- A signal is essentially a container for a value.
+- When a signal's value is updated, it notifies any code that is "watching" or "reading" that signal.
+- This notification mechanism allows Angular's rendering engine to know exactly which parts of the application state have changed and therefore which parts of the UI might need updating.
+
+### Signal types
+
+Angular provides several types of signals:
+
+- `signal()`: Creates a writable signal that you can update directly.
+- `computed()`: Creates a read-only signal whose value is derived from other signals. Its value is automatically recomputed only when the signals it depends on change.
+- `effect()`: Creates an operation that runs whenever one or more signal values it depends on change. Effects are typically used for side effects outside of the component rendering process, like logging or interacting with browser APIs.
+
+## Why were signals introduced?
+
+Signals were introduced to address several challenges and improve the Angular development experience and performance, primarily related to change detection and state management.
+
+### Simplifying change detection
+
+Angular's traditional change detection relies heavily on Zone.js, which patches asynchronous browser APIs (like `setTimeout`, `addEventListener`, `fetch`) to detect when potential state changes might have occurred. When a zone event fires, Angular typically runs change detection across the entire component tree (or a significant part of it) to find what has changed and update the DOM.
+
+This approach, while effective, can be inefficient in large or complex applications because it might check components whose state hasn't actually changed. Signals provide a fine-grained reactivity model. When a signal changes, Angular knows precisely which `computed` signals or templates depend on it and can update only those specific parts, leading to much more targeted and efficient updates.
+
+### Improving performance
+
+The fine-grained nature of signal-based reactivity directly translates to performance improvements. By reducing the amount of work Angular needs to do during each change detection cycle, applications can become faster and more responsive. Signals also lay the groundwork for potentially running Angular applications without Zone.js in the future, which could further simplify the framework and improve debugging.
+
+### Enhancing developer experience
+
+Signals offer a more explicit and easier-to-reason-about way to handle reactive state compared to some traditional methods. The flow of data and dependencies becomes clearer. While RxJS remains a powerful tool for complex asynchronous operations and data streams, signals provide a simpler primitive for managing synchronous state within components and services.
+
+### Aligning with modern patterns
+
+Many modern front-end frameworks and libraries have adopted similar fine-grained reactivity primitives (like Solid.js, Vue's Reactivity System). Introducing signals brings Angular closer to these modern patterns, making it potentially easier for developers familiar with such concepts to learn Angular and aligning Angular with current trends in front-end performance optimization.
+
+## How do signals work?
+
+Signals work based on a dependency tracking mechanism.
+
+### Dependency tracking
+
+- When you read a signal's value within a `computed` function or an `effect`, the signal registers the `computed` or `effect` as a "consumer" or "dependent".
+- When you update a writable signal using its `set()` or `update()` method, it notifies all its registered consumers that its value has changed.
+- `computed` signals automatically re-run their calculation function when their dependencies notify them.
+- `effect` functions automatically re-run their side effect logic when their dependencies notify them.
+- Angular's rendering process can also read signals. When a signal read occurs during template rendering, the component view becomes a consumer of that signal. When the signal changes, Angular knows that specific view needs to be updated.
+
+## Key signal types
+
+### Writable signals (`signal()`)
+
+Created using the `signal()` function. They hold a value that can be directly changed using the `.set()` or `.update()` methods.
+
+```typescript
+import { signal } from '@angular/core';
+
+const count = signal(0);
+
+console.log(count()); // Output: 0
+
+count.set(5);
+console.log(count()); // Output: 5
+
+count.update(value => value + 1);
+console.log(count()); // Output: 6
+```
+
+### Computed signals (`computed()`)
+
+Created using the `computed()` function. Their value is derived from the values of one or more other signals. They are read-only and automatically update when their dependencies change.
+
+```typescript
+import { signal, computed } from '@angular/core';
+
+const count = signal(0);
+const doubleCount = computed(() => count() * 2);
+
+console.log(doubleCount()); // Output: 0
+
+count.set(3);
+// doubleCount automatically updates
+console.log(doubleCount()); // Output: 6
+```
+
+### Effects (`effect()`)
+
+Created using the `effect()` function. They run a side-effect function whenever any signals read within the function change. Effects are not used for rendering but for operations like logging, synchronizing with browser APIs, etc.
+
+```typescript
+import { signal, effect } from '@angular/core';
+
+const name = signal('Angular');
+
+effect(() => {
+  console.log(`The name is: ${name()}`);
+});
+
+name.set('Signals'); // Output: The name is: Signals
+```
+
+## Further reading
+
+- [Angular Guide: Signals](https://angular.dev/guide/signals)
+- [Angular Blog: Introducing Signals](https://blog.angular.io/introducing-angular-signals-7c0b197f9868)

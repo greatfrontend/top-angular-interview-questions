@@ -1,0 +1,260 @@
+---
+title: What is an RxJS Subject?
+---
+
+## TL;DR
+
+An RxJS `Subject` is a special type of Observable that acts as both an **Observer** and an **Observable**.
+
+*   As an **Observer**, it can receive values using `next()`, `error()`, and `complete()` methods
+*   As an **Observable**, you can subscribe to it using the `subscribe()` method
+
+The key difference from a regular Observable is that a Subject is **multicast**, meaning it shares a single execution stream among all its subscribers. A regular Observable is typically **unicast**, creating a new execution for each subscriber.
+
+Subjects are commonly used in Angular for:
+
+*   Implementing event emitters
+*   Sharing data or events between different parts of an application, like between components via a service
+*   Creating hot Observables from cold ones
+
+There are also specialized Subjects like `BehaviorSubject` (emits the last value to new subscribers), `ReplaySubject` (emits a buffer of past values), and `AsyncSubject` (emits only the last value upon completion).
+
+```typescript
+import { Subject } from 'rxjs';
+
+const subject = new Subject<string>();
+
+// Subscribe to the subject
+subject.subscribe({
+  next: (v) => console.log(`Observer A: ${v}`)
+});
+
+subject.subscribe({
+  next: (v) => console.log(`Observer B: ${v}`)
+});
+
+// Emit values to all current subscribers
+subject.next('Hello'); // Both A and B receive 'Hello'
+subject.next('World'); // Both A and B receive 'World'
+```
+
+---
+
+## What is an RxJS Subject?
+
+An RxJS `Subject` is a unique type that bridges the gap between an Observer and an Observable. It allows values to be imperatively pushed into an Observable stream, which can then be subscribed to by multiple Observers.
+
+### Subject as an Observer
+
+A Subject implements the `Observer` interface, meaning it has the methods `next(value)`, `error(err)`, and `complete()`. You can call these methods on a Subject instance to push values, errors, or completion notifications into the stream it represents.
+
+```typescript
+import { Subject } from 'rxjs';
+
+const subject = new Subject<number>();
+
+// Push values into the subject
+subject.next(1);
+subject.next(2);
+subject.complete(); // Signal completion
+```
+
+### Subject as an Observable
+
+A Subject also extends the `Observable` class, meaning you can call the `subscribe()` method on it. When an Observer subscribes to a Subject, it becomes one of the listeners that will receive values pushed into the Subject via its `next()` method.
+
+```typescript
+import { Subject } from 'rxjs';
+
+const subject = new Subject<string>();
+
+// Subscribe to the subject
+const subscriptionA = subject.subscribe({
+  next: (v) => console.log(`Observer A: ${v}`)
+});
+
+const subscriptionB = subject.subscribe({
+  next: (v) => console.log(`Observer B: ${v}`)
+});
+
+// Values pushed here will be received by both Observer A and Observer B
+subject.next('First message');
+subject.next('Second message');
+
+// Unsubscribe when done
+subscriptionA.unsubscribe();
+subscriptionB.unsubscribe();
+```
+
+### Multicasting vs Unicasting
+
+This dual nature makes Subjects **multicast**. Unlike a standard Observable created with `new Observable()` or operators like `of()` or `from()`, which are typically **unicast** (each subscriber triggers a new, independent execution of the Observable logic), a Subject maintains a list of multiple subscribers and broadcasts the same values to all of them from a single source.
+
+Imagine a standard Observable as a blueprint for a factory: each subscriber gets their own factory built from the blueprint. A Subject is like a single, running factory: all subscribers connect to the output of that one factory.
+
+## Types of Subjects
+
+RxJS provides several specialized types of Subjects, each with slightly different behavior regarding when and how they emit values to new subscribers:
+
+### BehaviorSubject
+
+A `BehaviorSubject` requires an initial value and stores the latest value emitted to it. When a new Observer subscribes, it immediately receives the last emitted value (or the initial value if none have been emitted yet), and then receives any subsequent values. This is useful for representing "the current value" of something.
+
+```typescript
+import { BehaviorSubject } from 'rxjs';
+
+const behaviorSubject = new BehaviorSubject<number>(0); // Initial value is 0
+
+behaviorSubject.subscribe({
+  next: (v) => console.log(`Observer A: ${v}`) // A immediately gets 0
+});
+
+behaviorSubject.next(1); // A gets 1
+
+behaviorSubject.subscribe({
+  next: (v) => console.log(`Observer B: ${v}`) // B immediately gets the latest value, 1
+});
+
+behaviorSubject.next(2); // A gets 2, B gets 2
+```
+
+### ReplaySubject
+
+A `ReplaySubject` records a buffer of previously emitted values and emits them to any new subscriber upon subscription. You can configure the buffer size (how many values to replay) and optionally a window time (how long values are considered valid for replaying). This is useful for providing a history of values.
+
+```typescript
+import { ReplaySubject } from 'rxjs';
+
+const replaySubject = new ReplaySubject<string>(2); // Replays the last 2 values
+
+replaySubject.next('a');
+replaySubject.next('b');
+replaySubject.next('c'); // 'a' is now out of the buffer
+
+replaySubject.subscribe({
+  next: (v) => console.log(`Observer A: ${v}`) // A gets 'b', 'c'
+});
+
+replaySubject.next('d'); // A gets 'd'
+```
+
+### AsyncSubject
+
+An `AsyncSubject` only emits the last value produced by the Observable *when* the Observable completes. If the Observable completes without emitting any values, the AsyncSubject won't emit anything. This is useful for scenarios where you only care about the final result of an asynchronous operation.
+
+```typescript
+import { AsyncSubject } from 'rxjs';
+
+const asyncSubject = new AsyncSubject<number>();
+
+asyncSubject.subscribe({
+  next: (v) => console.log(`Observer A: ${v}`) // Won't log anything until complete()
+});
+
+asyncSubject.next(1);
+asyncSubject.next(2);
+asyncSubject.next(3); // 3 is the last value
+
+asyncSubject.subscribe({
+  next: (v) => console.log(`Observer B: ${v}`) // Won't log anything until complete()
+});
+
+asyncSubject.complete(); // Now both A and B get 3
+```
+
+## Common Use Cases in Angular
+
+Subjects are fundamental building blocks in many Angular patterns:
+
+### Event Emitters
+
+Angular's `EventEmitter` class, commonly used with `@Output` decorators, extends `Subject`. This allows components to emit events that parent components can subscribe to.
+
+```typescript
+import { Component, Output, EventEmitter } from '@angular/core';
+
+@Component({ /* ... */ })
+export class ChildComponent {
+  @Output() itemSelected = new EventEmitter<string>();
+
+  selectItem(item: string) {
+    this.itemSelected.emit(item); // Emitting a value via the EventEmitter (which is a Subject)
+  }
+}
+```
+
+### Service for Cross-Component Communication
+
+A common pattern is to use a `BehaviorSubject` or `Subject` within an Angular service to share data or events between components that don't have a direct parent-child relationship. Components can inject the service and subscribe to the Subject to receive updates.
+
+```typescript
+import { Injectable } from '@angular/core';
+import { Subject } from 'rxjs';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class DataSharingService {
+  private dataSubject = new Subject<string>();
+  data$ = this.dataSubject.asObservable(); // Expose as Observable to prevent external next() calls
+
+  sendData(data: string) {
+    this.dataSubject.next(data);
+  }
+}
+```
+
+Component A (sending data):
+
+```typescript
+import { Component } from '@angular/core';
+import { DataSharingService } from './data-sharing.service';
+
+@Component({ /* ... */ })
+export class ComponentA {
+  constructor(private dataSharingService: DataSharingService) {}
+
+  onClick() {
+    this.dataSharingService.sendData('Data from A');
+  }
+}
+```
+
+Component B (receiving data):
+
+```typescript
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { DataSharingService } from './data-sharing.service';
+import { Subscription } from 'rxjs';
+
+@Component({ /* ... */ })
+export class ComponentB implements OnInit, OnDestroy {
+  receivedData: string | null = null;
+  private dataSubscription!: Subscription;
+
+  constructor(private dataSharingService: DataSharingService) {}
+
+  ngOnInit() {
+    this.dataSubscription = this.dataSharingService.data$.subscribe(data => {
+      this.receivedData = data;
+      console.log('Component B received:', data);
+    });
+  }
+
+  ngOnDestroy() {
+    this.dataSubscription.unsubscribe(); // Clean up subscription
+  }
+}
+```
+
+### Converting Cold Observables to Hot Observables
+
+Subjects can be used with operators like `multicast()` or `share()` to make a cold Observable hot, allowing multiple subscribers to share a single underlying source execution.
+
+## Further reading
+
+*   [RxJS Documentation: Subject](https://rxjs.dev/guide/subject)
+*   [Angular Documentation: Sharing Data Between Components](https://angular.io/guide/component-interaction#share-data-with-a-service)
+*   [RxJS Documentation: Multicasting](https://rxjs.dev/guide/multicasting)
+
+

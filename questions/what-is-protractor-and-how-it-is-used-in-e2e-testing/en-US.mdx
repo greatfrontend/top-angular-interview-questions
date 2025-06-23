@@ -1,0 +1,71 @@
+---
+title: What is Protractor and how is it used for end-to-end testing?
+---
+
+## TL;DR
+
+Protractor was an end-to-end test framework specifically designed for Angular applications. It was built on top of WebDriverJS and ran tests against your application running in a real browser.
+
+Its key advantage for Angular was its ability to automatically wait for Angular-specific operations like `$digest` cycles and HTTP requests to complete before executing the next test step, making tests more reliable without manual waits. It also provided Angular-specific element locators, such as `by.model`, `by.binding`, and `by.repeater`.
+
+Protractor is now deprecated and is no longer the recommended E2E testing tool for Angular projects. Modern alternatives like Cypress, Playwright, and TestCafe are commonly used instead.
+
+---
+
+## What was Protractor?
+
+Protractor was an open-source end-to-end (E2E) test framework built specifically for Angular and AngularJS applications. It was developed by the Angular team at Google. Its primary purpose was to test the entire application flow from the user's perspective, interacting with the application running in a real browser.
+
+## How it was used for end-to-end testing
+
+Protractor ran tests against your deployed or running Angular application. It automated a browser to simulate user interactions like clicking buttons, filling forms, and navigating pages, and then asserted that the application behaved as expected.
+
+### Architecture
+
+Protractor was built on top of WebDriverJS, which is the JavaScript implementation of the Selenium WebDriver API. It typically used a Selenium Server (or ChromeDriver/GeckoDriver directly) to control the browser. Test specifications were commonly written using behavior-driven development (BDD) frameworks like Jasmine, Mocha, or Cucumber.
+
+### Key features for Angular
+
+Protractor offered features that made testing Angular applications easier and more reliable compared to using raw Selenium WebDriver:
+
+- **Automatic waiting**
+  Protractor could automatically synchronize with Angular applications. It would wait for pending `$digest` cycles (in AngularJS) or pending HTTP requests and other asynchronous operations (in Angular) to complete before executing the next step in the test. This significantly reduced the need for explicit waits (`browser.sleep()`) and made tests less flaky.
+- **Angular-specific locators**
+  It provided specialized element locators that understood Angular concepts. For example, you could find elements by their `ng-model`, `{{binding}}`, or `ng-repeat` attributes, which were often more stable than traditional CSS or XPath selectors that could change with minor DOM structure updates.
+  ```javascript
+  // Example using an Angular-specific locator
+  element(by.model('user.name')).sendKeys('Alice');
+  element(by.binding('greeting'))
+    .getText()
+    .then(function (text) {
+      expect(text).toEqual('Hello Alice!');
+    });
+  ```
+- **Integration with test frameworks**
+  Protractor integrated seamlessly with popular JavaScript test frameworks like Jasmine, Mocha, and Cucumber, allowing developers to write tests using familiar syntax and assertion libraries.
+
+### Typical workflow
+
+The typical workflow involved:
+
+1.  Writing test specifications (specs) using a framework like Jasmine, describing user interactions and expected outcomes.
+2.  Configuring Protractor using a configuration file (`protractor.conf.js`) to specify the test files, browser capabilities, and test framework.
+3.  Starting the application server and potentially a Selenium server (though often ChromeDriver was used directly).
+4.  Running Protractor from the command line, which would execute the tests in the configured browser.
+
+## Deprecation and alternatives
+
+Protractor is now deprecated. Active development has ceased, and it is no longer maintained by the Angular team. This decision was influenced by the evolution of the web ecosystem, the rise of alternative E2E testing tools, and changes within Angular itself.
+
+For new Angular projects (and for migrating existing ones), the recommended approach is to use modern E2E testing frameworks. Popular alternatives include:
+
+- **Cypress:** A fast, easy-to-use E2E test runner that runs in the same run loop as your application.
+- **Playwright:** Developed by Microsoft, it supports multiple browsers and provides fast, reliable execution.
+- **TestCafe:** Another end-to-end testing framework that doesn't rely on Selenium.
+
+Angular CLI projects created from Angular version 9 onwards no longer include Protractor by default and prompt the user to choose an E2E framework during project setup.
+
+## Further reading
+
+- [Protractor GitHub Repository (Archived)](https://github.com/angular/protractor)
+- [Angular Documentation on E2E Testing (Mentions alternatives)](https://angular.dev/guide/testing/setup)

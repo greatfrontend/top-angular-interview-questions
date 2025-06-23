@@ -1,0 +1,209 @@
+---
+title: What is content projection?
+---
+
+## TL;DR
+
+Content projection in Angular is a pattern where you can pass HTML content from a parent component and "project" it into a specific place within a child component's template. It's similar to the concept of `children` props in React or slots in Vue. The primary element used for content projection is `<ng-content>`.
+
+It allows you to create reusable components that don't need to know the exact content they will display, making them more flexible. You define placeholders in the child component's template using `<ng-content>`, and the parent component provides the actual content between the child component's tags.
+
+For example, a simple card component might use `<ng-content>` to project the card's body content:
+
+```html
+<!-- Parent Component Template -->
+<app-card>
+  <h2>Card Title</h2>
+  <p>This is the card body content.</p>
+</app-card>
+```
+
+```html
+<!-- Child Component (app-card) Template -->
+<div class="card">
+  <div class="card-header">...</div>
+  <div class="card-body">
+    <ng-content></ng-content>
+    <!-- Content from parent is projected here -->
+  </div>
+  <div class="card-footer">...</div>
+</div>
+```
+
+You can also project multiple pieces of content into different slots using the `select` attribute on `<ng-content>`.
+
+---
+
+## What is content projection?
+
+Content projection is an Angular pattern that allows you to insert, or "project," a block of HTML content from a parent component into a designated spot within a child component's template. This makes components more reusable and configurable, as the child component doesn't need to hardcode the specific content it displays. Instead, the parent component provides the content dynamically.
+
+## Why use content projection?
+
+Content projection is useful for several reasons:
+
+### Creating flexible and reusable components
+
+It allows you to build generic container or layout components (like panels, cards, modals, or tabs) that can wrap arbitrary content provided by the parent. The child component defines the structure and styling, while the parent defines the specific content that goes inside that structure.
+
+### Separating concerns
+
+The parent component is responsible for the content, while the child component is responsible for the layout and presentation of that content. This separation makes components easier to understand, test, and maintain.
+
+### Implementing wrapper components
+
+You can create components that wrap native HTML elements or other Angular components, adding extra functionality or styling without needing to replicate the wrapped content's logic.
+
+## How to use `<ng-content>`
+
+The core element for content projection in Angular is `<ng-content>`. You place this element within the child component's template where you want the projected content to appear.
+
+### Single-slot content projection
+
+By default, `<ng-content>` acts as a single slot. Any content placed between the opening and closing tags of the child component in the parent's template will be projected into the first (and usually only) `<ng-content>` element in the child's template.
+
+**Example:**
+
+Let's create a simple `PanelComponent`.
+
+```typescript
+// panel.component.ts
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-panel',
+  template: `
+    <div class="panel">
+      <div class="panel-header">Panel Header</div>
+      <div class="panel-body">
+        <ng-content></ng-content>
+        <!-- Content from parent goes here -->
+      </div>
+    </div>
+  `,
+  styles: [
+    `
+      .panel {
+        border: 1px solid #ccc;
+        margin: 10px;
+      }
+      .panel-header {
+        background-color: #f0f0f0;
+        padding: 10px;
+      }
+      .panel-body {
+        padding: 10px;
+      }
+    `,
+  ],
+})
+export class PanelComponent {}
+```
+
+Now, a parent component can use `app-panel` and provide content:
+
+```html
+<!-- Parent Component Template -->
+<app-panel>
+  <p>This paragraph will be projected into the panel body.</p>
+  <ul>
+    <li>Item 1</li>
+    <li>Item 2</li>
+  </ul>
+</app-panel>
+```
+
+The rendered output will look something like this:
+
+```html
+<div class="panel">
+  <div class="panel-header">Panel Header</div>
+  <div class="panel-body">
+    <p>This paragraph will be projected into the panel body.</p>
+    <ul>
+      <li>Item 1</li>
+      <li>Item 2</li>
+    </ul>
+  </div>
+</div>
+```
+
+## Multi-slot content projection
+
+You can project different pieces of content into specific locations within the child component's template using the `select` attribute on `<ng-content>`. The `select` attribute accepts a CSS selector (like an element name, class, or attribute). Angular will then project content from the parent that matches that selector into the corresponding `<ng-content>` slot.
+
+**Example:**
+
+Let's enhance the `PanelComponent` to have separate slots for header, body, and footer.
+
+```typescript
+// panel.component.ts
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-panel',
+  template: `
+    <div class="panel">
+      <div class="panel-header">
+        <ng-content select="[header]"></ng-content>
+        <!-- Project content with 'header' attribute -->
+      </div>
+      <div class="panel-body">
+        <ng-content></ng-content>
+        <!-- Project any other content (default slot) -->
+      </div>
+      <div class="panel-footer">
+        <ng-content select="[footer]"></ng-content>
+        <!-- Project content with 'footer' attribute -->
+      </div>
+    </div>
+  `,
+  styles: [
+    `
+      .panel {
+        border: 1px solid #ccc;
+        margin: 10px;
+      }
+      .panel-header {
+        background-color: #f0f0f0;
+        padding: 10px;
+      }
+      .panel-body {
+        padding: 10px;
+      }
+      .panel-footer {
+        background-color: #f0f0f0;
+        padding: 10px;
+        text-align: right;
+      }
+    `,
+  ],
+})
+export class PanelComponent {}
+```
+
+Now, the parent component can provide content for specific slots:
+
+```html
+<!-- Parent Component Template -->
+<app-panel>
+  <h2 header>Custom Panel Title</h2>
+  <!-- Matches select="[header]" -->
+  <p>This is the main content of the panel body.</p>
+  <!-- Matches default <ng-content> -->
+  <button footer>Close</button>
+  <!-- Matches select="[footer]" -->
+</app-panel>
+```
+
+In this multi-slot scenario:
+
+- The `<h2>` element with the `header` attribute is projected into the `<ng-content select="[header]">`.
+- The `<button>` element with the `footer` attribute is projected into the `<ng-content select="[footer]">`.
+- The `<p>` element, which doesn't match any specific `select` attribute, is projected into the `<ng-content>` without a `select` attribute (the default slot).
+
+If content is provided by the parent but doesn't match any `select` attribute and there is no default `<ng-content>` without a `select`, that content will not be projected.
+
+## Further reading
+
+- [Angular Documentation: Content projection](https://angular.dev/guide/components/content-projection)

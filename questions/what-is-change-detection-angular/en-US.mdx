@@ -1,0 +1,172 @@
+---
+title: What is change detection in Angular and how does it work?
+---
+
+## TL;DR
+
+Change detection in Angular is the mechanism that synchronizes the application's data model with the user interface (DOM). Angular needs this because JavaScript is dynamic, and it doesn't automatically know when data bound to the view has changed.
+
+By default, Angular uses Zone.js to detect asynchronous operations like browser events (clicks, input), timers (`setTimeout`), and HTTP requests. When one of these operations completes, Zone.js notifies Angular, triggering a change detection cycle.
+
+During a cycle, Angular traverses the component tree from top to bottom. For each component, it checks if the values of any template expressions (like `{{ data }}` or `[property]="data"`) have changed since the last check. If a change is detected, Angular updates the corresponding part of the DOM.
+
+You can optimize this process using the `OnPush` change detection strategy. With `OnPush`, a component is only checked when:
+
+- One of its input properties changes reference (not just value).
+- An event originates from the component or its children.
+- Change detection is explicitly triggered (e.g., using `ChangeDetectorRef`).
+- An observable bound with the `async` pipe emits a new value.
+
+Available from Angular 16 onwards, Signals offer a more granular approach to change detection, allowing specific parts of the UI to update only when the signals they depend on change, potentially reducing the need for full tree checks and Zone.js in the future.
+
+---
+
+## What is change detection?
+
+Change detection is Angular's core mechanism responsible for updating the user interface (UI) whenever the application's data model changes. Its primary goal is to ensure that the view displayed to the user is always a correct reflection of the current state of the application data.
+
+### Synchronizing data and view
+
+In web applications, the UI (the DOM) needs to stay in sync with the underlying data. When a user interacts with the application (e.g., clicks a button, types into an input field) or when data is fetched from a server, the application's state changes. Change detection is the process that detects these changes and updates the relevant parts of the DOM to reflect the new state.
+
+## Why is change detection needed?
+
+Unlike some frameworks that might use dirty checking or observable patterns extensively by default, Angular needs a structured way to know _when_ data might have changed. JavaScript itself doesn't provide a built-in mechanism to automatically notify a framework when a variable's value is modified.
+
+### Reacting to data changes
+
+Angular relies on change detection to efficiently determine which parts of the UI need to be re-rendered or updated based on data changes. Without it, Angular wouldn't know when to refresh the view after an event handler updates a component property or after an asynchronous operation completes.
+
+## How does change detection work?
+
+Angular's change detection works by traversing the component tree and checking for changes in data bindings.
+
+### The component tree
+
+An Angular application is structured as a tree of components. Each component has its own view (template) and associated data (properties). Change detection operates on this tree structure.
+
+### Default strategy (CheckAlways)
+
+By default, Angular uses a strategy that effectively checks every component in the tree during each change detection cycle.
+
+- **Traversal:** Angular starts from the root component and traverses down the component tree to the leaf components.
+- **Checking bindings:** For each component, Angular checks all the template expressions (like `{{ property }}` or `[attribute]="property"`) defined in its template. It compares the current value of the expression with the value it had during the previous change detection cycle.
+- **Updating the DOM:** If Angular detects that the value of an expression has changed, it updates the corresponding part of the component's DOM.
+- **One-way data flow:** Change detection enforces a one-way data flow from parent to child components. During a single cycle, data flows downwards. Angular throws an error in development mode if a change detected in a child component attempts to update a binding in a parent component that has already been checked in the same cycle (the "ExpressionChangedAfterItHasBeenCheckedError").
+
+## Triggering change detection
+
+A change detection cycle is typically triggered by events that might potentially change the application's state.
+
+### Zone.js (default)
+
+By default, Angular relies on Zone.js, a library that patches asynchronous browser APIs.
+
+- **Patching APIs:** Zone.js intercepts calls to standard asynchronous APIs like `setTimeout`, `setInterval`, `XMLHttpRequest`, event listeners (`addEventListener`), etc.
+- **Notifying Angular:** When an asynchronous operation patched by Zone.js completes, Zone.js notifies Angular that a potential change might have occurred.
+- **Triggering a cycle:** This notification prompts Angular to run a change detection cycle, starting from the root component.
+
+Common events that trigger a cycle via Zone.js include:
+
+- Browser events (clicks, input, focus, blur, etc.)
+- Timers (`setTimeout`, `setInterval`)
+- HTTP requests (using `HttpClient`, which is built on `XMLHttpRequest` or `fetch`)
+
+### Manual triggering
+
+You can also manually trigger change detection using the `ChangeDetectorRef` service, which is injected into components.
+
+- `cdRef.detectChanges()`: Runs change detection specifically for the current component and its descendants, regardless of the change detection strategy.
+- `cdRef.markForCheck()`: Marks the component and its ancestors as needing to be checked in the _next_ change detection cycle. This is particularly useful with the `OnPush` strategy when a change occurs that Angular wouldn't otherwise detect (e.g., modifying an object property without changing the object reference).
+
+```typescript
+import { Component, ChangeDetectorRef } from '@angular/core';
+
+@Component({
+  selector: 'app-my-component',
+  template: `
+    <p>{{ data.value }}</p>
+    <button (click)="updateData()">Update Data</button>
+  `,
+})
+export class MyComponent {
+  data = { value: 'Initial' };
+
+  constructor(private cdRef: ChangeDetectorRef) {}
+
+  updateData() {
+    // Modifying an object property doesn't trigger OnPush by default
+    this.data.value = 'Updated: ' + new Date().toLocaleTimeString();
+    // Manually trigger change detection for this component and its children
+    this.cdRef.detectChanges();
+  }
+}
+```
+
+## Change detection strategies
+
+Angular provides two strategies to control how change detection runs for individual components.
+
+### Default strategy (`ChangeDetectionStrategy.Default`)
+
+This is the default behavior. Every time an event triggers a change detection cycle, Angular checks all components in the tree from root to leaves, regardless of where the event occurred or which data changed.
+
+### OnPush strategy (`ChangeDetectionStrategy.OnPush`)
+
+Available from Angular 2 onwards, the `OnPush` strategy optimizes performance by reducing the number of components checked during a cycle. When a component uses `OnPush`, Angular only checks it (and its subtree) under specific conditions:
+
+- **Input reference changes:** If a component's input property changes its _reference_ (e.g., a new object or array is assigned), Angular checks the component. If only a property _within_ an input object or array changes, the component is _not_ checked unless manually triggered.
+- **Event originates in component/children:** If an event handler within the component's template or the template of one of its children is triggered, Angular checks the component.
+- **Manual trigger:** If `cdRef.markForCheck()` or `cdRef.detectChanges()` is called on the component.
+- **Async pipe:** If an observable bound to the template using the `async` pipe emits a new value, Angular checks the component.
+
+```typescript
+import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
+
+@Component({
+  selector: 'app-on-push-component',
+  template: `
+    <p>Input Value: {{ data?.value }}</p>
+    <p>Internal Counter: {{ counter }}</p>
+    <button (click)="increment()">Increment Internal</button>
+  `,
+  changeDetection: ChangeDetectionStrategy.OnPush, // Using OnPush strategy
+})
+export class OnPushComponent {
+  @Input() data: { value: string } | undefined;
+  counter = 0;
+
+  increment() {
+    this.counter++;
+    // This component will be checked because the event originated here
+  }
+
+  // This method won't cause a check if called from outside
+  // unless 'data' input reference changes or markForCheck is called
+  updateInternalData() {
+    // ... update internal data ...
+  }
+}
+```
+
+Using `OnPush` effectively often requires working with immutable data structures or leveraging observables and the `async` pipe to ensure that Angular is notified of changes.
+
+## Angular Signals (Available from Angular 16 onwards)
+
+Signals represent a newer, more granular approach to reactivity and change detection in Angular.
+
+### Fine-grained reactivity
+
+Instead of relying on Zone.js and checking the entire component tree, Signals allow Angular to track dependencies between signal values and the parts of the template that use them. When a signal's value changes, Angular knows precisely which components and which specific parts of the DOM need updating, potentially leading to more efficient updates.
+
+### Zone-less applications
+
+Signals are designed to work independently of Zone.js, making it possible to build Zone-less Angular applications, which can further improve performance and simplify debugging by removing Zone.js overhead. Signals can also be used alongside Zone.js in existing applications.
+
+While Signals don't replace the traditional change detection system entirely yet, they are becoming the foundation for Angular's future reactivity model.
+
+## Further reading
+
+- [Angular Documentation: Change Detection](https://angular.dev/guide/change-detection)
+- [Angular Documentation: Signals](https://angular.dev/guide/signals)
+- [Angular Documentation: Zone.js](https://angular.dev/guide/zone)

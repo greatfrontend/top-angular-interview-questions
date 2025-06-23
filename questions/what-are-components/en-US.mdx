@@ -1,0 +1,105 @@
+---
+title: What are components?
+---
+
+## TL;DR
+
+Angular components are the fundamental building blocks of an Angular application. They control a patch of the screen called a view. Every component consists of three main parts:
+
+- A **template**, which is the HTML that defines the component's view
+- A **class**, written in TypeScript, which contains the data and logic for the view
+- **Metadata**, defined by the `@Component` decorator, which tells Angular how to process the class and template, linking them together and defining things like the component's selector (how it's used in other templates) and styles
+
+Components encapsulate their logic, data, and view, making them reusable and testable units. An Angular application is essentially a tree of nested components.
+
+---
+
+## What are components?
+
+Components are the most fundamental building blocks of Angular applications. They are responsible for controlling a specific part of the user interface, often referred to as a "view". Almost everything you see and interact with in an Angular application is part of a component's view.
+
+## Structure of a component
+
+Every Angular component is composed of three main parts:
+
+### The template
+
+The template is the HTML that defines the structure and layout of the component's view. It can include standard HTML elements, Angular template syntax (like interpolation `{{ }}` and property binding `[ ]`), and even other components.
+
+```html
+<!-- my-component.component.html -->
+<div>
+  <h1>Hello, {{ name }}!</h1>
+  <button (click)="changeName()">Change Name</button>
+</div>
+```
+
+### The class
+
+The class, typically written in TypeScript, contains the data properties and methods (logic) that the template needs. The template interacts with the class properties and methods to display data and respond to user input.
+
+```typescript
+// my-component.component.ts
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-my-component',
+  templateUrl: './my-component.component.html',
+  styleUrls: ['./my-component.component.css'],
+})
+export class MyComponent {
+  name = 'World'; // Data property
+
+  changeName() {
+    // Logic method
+    this.name = 'Angular';
+  }
+}
+```
+
+### The metadata
+
+The metadata is configured using the `@Component` decorator, which is applied to the component class. This decorator provides Angular with the information it needs to process the class and template. Key properties in the metadata include:
+
+- `selector`: A CSS selector that tells Angular how to find and instantiate this component in an HTML template (e.g., `<app-my-component>`).
+- `templateUrl` or `template`: Specifies the HTML template for the component.
+- `styleUrls` or `styles`: Specifies the CSS styles for the component.
+- `standalone`: (Available from Angular 14 onwards) A boolean indicating if the component is standalone and doesn't require being declared in an NgModule.
+
+```typescript
+// my-component.component.ts (Metadata part)
+@Component({
+  selector: 'app-my-component', // How to use it: <app-my-component></app-my-component>
+  templateUrl: './my-component.component.html', // Link to the HTML
+  styleUrls: ['./my-component.component.css'], // Link to the CSS
+})
+export class MyComponent {
+  // ... class properties and methods
+}
+```
+
+## Role and purpose
+
+Components serve several key purposes in an Angular application:
+
+### Encapsulation
+
+Each component encapsulates its own view, logic, and styles. This means the HTML, TypeScript, and CSS for a component are bundled together, preventing styles or logic from unintentionally affecting other parts of the application.
+
+### Reusability
+
+Because components are self-contained units, they can be reused throughout the application or even in different applications. Once you build a component (like a button, a data table, or a navigation bar), you can use its selector to place it anywhere in your templates.
+
+### Building blocks
+
+Angular applications are structured as a tree of components. A root component (usually `AppComponent`) contains other components, which in turn can contain more components, creating a hierarchical structure that represents the entire user interface.
+
+### Testability
+
+The encapsulated nature of components makes them easier to test in isolation, ensuring that individual parts of the UI behave as expected.
+
+## Further reading
+
+- [Angular Documentation: Introduction to components](https://angular.dev/guide/components)
+- [Angular Documentation: Component templates](https://angular.dev/guide/templates)
+- [Angular Documentation: Component styles](https://angular.dev/guide/style-guide)

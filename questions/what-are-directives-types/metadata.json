@@ -1,0 +1,15 @@
+{
+  "slug": "what-are-directives-types",
+  "languages": [],
+  "companies": [],
+  "premium": false,
+  "duration": 5,
+  "published": true,
+  "featured": true,
+  "category": "angular",
+  "topics": ["typescript"],
+  "importance": "low",
+  "ranking": 90,
+  "difficulty": "easy",
+  "section": "basics"
+}

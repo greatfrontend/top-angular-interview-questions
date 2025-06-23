@@ -1,0 +1,176 @@
+---
+title: What is `zone.js` and NgZone?
+---
+
+## TL;DR
+
+`zone.js` is a library that patches asynchronous browser APIs like `setTimeout`, `addEventListener`, and `Promise` to create execution contexts called "zones". It allows tracking when asynchronous operations start and finish.
+
+Angular uses `zone.js` to automatically detect when potential changes might have occurred in your application's data. When an asynchronous event tracked by `zone.js` completes (like a button click, an HTTP response, or a timer firing), `zone.js` notifies Angular, which then triggers its change detection mechanism to update the UI if necessary.
+
+`NgZone` is an injectable Angular service that wraps `zone.js`. It provides methods to explicitly run code _inside_ Angular's zone (`run()`) or _outside_ Angular's zone (`runOutsideAngular()`). Running code outside the zone is useful for performance-sensitive tasks like frequent DOM manipulations or animations, as it prevents Angular's change detection from running unnecessarily after every microtask or event within that code block.
+
+---
+
+## What is zone.js?
+
+`zone.js` is a JavaScript library that implements the concept of "zones". A zone is an execution context that persists across asynchronous tasks. It works by "monkey patching" or wrapping standard asynchronous browser APIs and Node.js APIs, such as:
+
+- Event listeners (`addEventListener`, `removeEventListener`)
+- Timers (`setTimeout`, `setInterval`, `requestAnimationFrame`)
+- Promise callbacks (`.then()`, `.catch()`, `.finally()`)
+- XMLHttpRequest
+- Other async operations
+
+When you call one of these patched APIs, `zone.js` intercepts the call. It can then track when the asynchronous task starts and, more importantly, when it completes. This tracking allows `zone.js` to notify interested parties (like Angular) when a potential state change might have occurred due to an asynchronous event finishing.
+
+## Why does Angular use zone.js?
+
+Angular uses `zone.js` to automate and optimize its change detection process. In a typical application, state changes often happen as a result of asynchronous events:
+
+- A user clicks a button (DOM event)
+- Data is received from an HTTP request (XMLHttpRequest/Fetch)
+- A timer completes (setTimeout/setInterval)
+- A Promise resolves
+
+Without `zone.js`, Angular would need manual triggers or more complex mechanisms to know _when_ to check if the application state has changed and the UI needs updating.
+
+By integrating with `zone.js`, Angular is notified whenever any of the patched asynchronous operations complete within Angular's zone. This notification signals to Angular that it's a good time to run its change detection cycle, checking all components from the root down to see if any data bound to the template has changed and updating the DOM accordingly. This makes Angular's change detection largely automatic and efficient.
+
+## What is NgZone?
+
+`NgZone` is an Angular service that provides an abstraction over the underlying `zone.js` library. It allows you to interact with Angular's specific zone, often referred to as the "Angular zone". You can inject `NgZone` into your components, services, or directives.
+
+The primary purpose of `NgZone` is to give developers control over when code runs inside or outside the Angular zone.
+
+### Running code inside the Angular zone
+
+By default, most code executed within an Angular application (event handlers in templates, lifecycle hooks, service methods called from components) runs inside the Angular zone. When an asynchronous operation completes within this zone, Angular's change detection is triggered.
+
+You can explicitly run code inside the Angular zone using the `run()` method:
+
+```typescript
+import { Component, NgZone } from '@angular/core';
+
+@Component({
+  selector: 'app-example',
+  template: '<button (click)="onClick()">Click me</button>',
+})
+export class ExampleComponent {
+  message = 'Initial message';
+
+  constructor(private ngZone: NgZone) {}
+
+  onClick() {
+    // This code runs inside the Angular zone by default
+    this.message = 'Button clicked!';
+    // Change detection will run automatically after this event handler finishes
+  }
+
+  runInsideZone() {
+    this.ngZone.run(() => {
+      // Code inside run() is guaranteed to be in the Angular zone
+      this.message = 'Updated inside zone!';
+      // Change detection will run after this callback finishes
+    });
+  }
+}
+```
+
+Using `ngZone.run()` is typically not necessary for standard Angular code but can be useful if you've explicitly run code outside the zone and need to jump back in to trigger change detection based on a state change.
+
+### Running code outside the Angular zone
+
+The `runOutsideAngular()` method is particularly useful for performance optimization. It allows you to execute code that involves frequent asynchronous events or intensive computations without triggering Angular's change detection after every single event or microtask within that code block.
+
+This is commonly used for:
+
+- Animations driven by `requestAnimationFrame`
+- Handling frequent DOM events like `scroll`, `mousemove`, `resize`
+- Integrating with third-party libraries that might trigger many async operations
+
+By running these operations outside the Angular zone, you prevent Angular from constantly checking for changes, which can significantly improve performance, especially in complex applications or on less powerful devices.
+
+```typescript
+import {
+  Component,
+  NgZone,
+  ElementRef,
+  ViewChild,
+  AfterViewInit,
+  OnDestroy,
+} from '@angular/core';
+
+@Component({
+  selector: 'app-performance-example',
+  template: `
+    <div
+      #scrollContainer
+      style="height: 200px; overflow-y: scroll; border: 1px solid black;">
+      <p *ngFor="let item of items">{{ item }}</p>
+    </div>
+    <p>Scroll count: {{ scrollCount }}</p>
+  `,
+})
+export class PerformanceExampleComponent implements AfterViewInit, OnDestroy {
+  @ViewChild('scrollContainer') scrollContainer!: ElementRef<HTMLDivElement>;
+  items = Array.from({ length: 100 }, (_, i) => `Item ${i + 1}`);
+  scrollCount = 0;
+  private scrollListener!: () => void;
+
+  constructor(private ngZone: NgZone) {}
+
+  ngAfterViewInit() {
+    // Run the scroll event listener setup and handling outside Angular's zone
+    this.ngZone.runOutsideAngular(() => {
+      this.scrollListener = () => {
+        // This code runs outside the Angular zone
+        // console.log('Scrolled!'); // This log won't trigger change detection
+        this.scrollCount++; // This updates the property, but UI won't update immediately
+      };
+      this.scrollContainer.nativeElement.addEventListener(
+        'scroll',
+        this.scrollListener
+      );
+    });
+  }
+
+  ngOnDestroy() {
+    // Ensure the listener is removed
+    if (this.scrollListener) {
+      this.scrollContainer.nativeElement.removeEventListener(
+        'scroll',
+        this.scrollListener
+      );
+    }
+  }
+
+  // If you needed to update the UI based on scrollCount occasionally,
+  // you would use ngZone.run() inside the scrollListener or elsewhere.
+  // For example, update a separate counter displayed elsewhere:
+  // updateDisplayCounter() {
+  //   this.ngZone.run(() => {
+  //     this.displayedScrollCount = this.scrollCount;
+  //   });
+  // }
+}
+```
+
+In this example, the `scroll` event handler runs outside the Angular zone. The `scrollCount` property is updated, but Angular's change detection is not triggered for every scroll event. If you needed to display the `scrollCount` in the template and have it update, you would need to explicitly call `this.ngZone.run()` at appropriate times (e.g., using a debounce or throttle mechanism, or when the user stops scrolling) to jump back into the Angular zone and trigger change detection.
+
+## Zone-less applications
+
+Available from Angular 11 onwards, it is possible to run Angular applications without `zone.js`. This is often referred to as "zone-less" mode. In this mode, Angular does not rely on `zone.js` to trigger change detection automatically. Instead, change detection must be triggered manually using techniques like:
+
+- Injecting `ChangeDetectorRef` and calling `markForCheck()` or `detectChanges()`.
+- Using the `async` pipe with Observables.
+- Leveraging Signals (available from Angular 16 onwards), which provide a reactive primitive that automatically notifies the framework of changes.
+
+Running zone-less gives developers more fine-grained control over change detection, which can be beneficial for performance in certain scenarios, but it requires more manual management of change detection triggers.
+
+## Further reading
+
+- [Angular documentation on NgZone](https://angular.dev/api/core/NgZone)
+- [zone.js GitHub repository](https://github.com/angular/zone.js)
+- [Exploring Angular's Zone.js and NgZone](https://angular.io/guide/zone)
+- [Angular Change Detection Explained](https://angular.io/guide/change-detection)

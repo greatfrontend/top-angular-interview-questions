@@ -1,0 +1,167 @@
+---
+title: What are some uses of interceptors and can we provide multi-interceptors?
+---
+
+## TL;DR
+
+Angular HTTP Interceptors allow you to intercept outgoing HTTP requests and incoming HTTP responses, process them, and pass them along. They are useful for tasks like adding authentication tokens to headers, logging requests and responses, handling errors globally, or caching responses.
+
+You can provide multiple interceptors in your application. Angular processes them in a chain. To provide multiple interceptors, you use the `HTTP_INTERCEPTORS` injection token and set the `multi` property to `true` for each interceptor provider in your module or component's `providers` array. The order in which you list them in the `providers` array determines the order they are applied to requests and responses.
+
+```typescript
+import {
+  provideHttpClient,
+  withInterceptorsFromDi,
+} from '@angular/common/http';
+import { HTTP_INTERCEPTORS } from '@angular/common/http';
+import { NgModule } from '@angular/core';
+
+import { AuthInterceptor } from './auth.interceptor';
+import { LoggingInterceptor } from './logging.interceptor';
+
+@NgModule({
+  providers: [
+    // Using provideHttpClient with interceptorsFromDi (modern approach)
+    // provideHttpClient(withInterceptorsFromDi()),
+    // { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
+    // { provide: HTTP_INTERCEPTORS, useClass: LoggingInterceptor, multi: true },
+
+    // Or using the older module-based approach (HttpClientModule)
+    // and providing interceptors directly
+    { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
+    { provide: HTTP_INTERCEPTORS, useClass: LoggingInterceptor, multi: true },
+  ],
+})
+export class AppModule {}
+```
+
+---
+
+## What are HTTP Interceptors?
+
+Angular HTTP Interceptors are a feature of the `@angular/common/http` module that allows you to intercept HTTP requests and responses. They provide a way to globally handle HTTP communication between your application and the backend.
+
+### How they work
+
+An interceptor sits in the HTTP pipeline. When your application makes an HTTP request using `HttpClient`, the request first goes through the interceptor chain before being sent to the server. Similarly, when the server responds, the response goes back through the same interceptor chain (in reverse order) before reaching the service or component that initiated the request.
+
+An interceptor is a class that implements the `HttpInterceptor` interface and has an `intercept` method. This method receives the outgoing request and a `HttpHandler` object. The `HttpHandler` represents the next interceptor in the chain or the backend itself. The `intercept` method can modify the request, pass it to the next handler, and then process the response returned by the handler.
+
+```typescript
+import {
+  HttpInterceptor,
+  HttpRequest,
+  HttpHandler,
+  HttpEvent,
+} from '@angular/common/http';
+import { Observable } from 'rxjs';
+
+export class MyInterceptor implements HttpInterceptor {
+  intercept(
+    request: HttpRequest<any>,
+    next: HttpHandler
+  ): Observable<HttpEvent<any>> {
+    // Process the outgoing request here
+    console.log('Outgoing request:', request);
+
+    // Pass the request to the next handler and process the response
+    return next
+      .handle(request)
+      .pipe
+      // Process the incoming response here
+      // For example, tap into the response stream
+      // tap(event => {
+      //   if (event instanceof HttpResponse) {
+      //     console.log('Incoming response:', event);
+      //   }
+      // })
+      ();
+  }
+}
+```
+
+## Common uses of HTTP Interceptors
+
+Interceptors are powerful because they allow you to apply logic to all or specific HTTP requests and responses without modifying the code that makes the calls.
+
+### Adding authentication tokens
+
+A very common use case is automatically adding an authentication token (like a JWT) to the headers of outgoing requests. This ensures that every request to a protected API endpoint includes the necessary credentials without needing to manually add the header in every service method.
+
+### Logging HTTP requests and responses
+
+Interceptors can be used to log details about every HTTP request and its corresponding response, including URLs, headers, status codes, and response bodies. This is useful for debugging and monitoring.
+
+### Error handling
+
+You can centralize error handling logic. For example, an interceptor can catch specific HTTP error status codes (like 401 Unauthorized or 500 Internal Server Error) and trigger actions like redirecting the user to a login page, displaying a global error notification, or retrying the request.
+
+### Caching
+
+An interceptor can implement a caching strategy. It can check if a response for a particular request URL is already in a cache. If it is, it can return the cached response immediately without making a backend call. If not, it proceeds with the request and caches the response before returning it.
+
+### Modifying request or response headers
+
+Beyond authentication tokens, you might need to add other standard headers (like `Content-Type`, `Accept`), modify existing ones, or remove sensitive information from response headers.
+
+### Mocking backend responses
+
+During development or testing, an interceptor can be used to intercept specific requests and return mock responses, allowing you to work on the frontend without a fully functional backend.
+
+## Can we provide multi-interceptors?
+
+Yes, you can provide multiple interceptors in an Angular application. Angular's HTTP client supports an interceptor chain. When you provide multiple interceptors, they are processed sequentially for outgoing requests and in reverse order for incoming responses.
+
+### Providing multiple interceptors
+
+To provide multiple interceptors, you use the `HTTP_INTERCEPTORS` injection token and set the `multi` property to `true` for each interceptor you provide. This tells Angular that `HTTP_INTERCEPTORS` is a multi-provider token, and it should collect all providers registered with this token into an array.
+
+You typically provide interceptors in the `providers` array of your root `AppModule` or a feature module that uses `HttpClient`.
+
+```typescript
+import {
+  provideHttpClient,
+  withInterceptorsFromDi,
+} from '@angular/common/http';
+import { HTTP_INTERCEPTORS } from '@angular/common/http';
+import { NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+
+import { AuthInterceptor } from './auth.interceptor';
+import { LoggingInterceptor } from './logging.interceptor';
+import { ErrorInterceptor } from './error.interceptor';
+
+@NgModule({
+  imports: [
+    BrowserModule,
+    // If using standalone components and provideHttpClient
+    // provideHttpClient(withInterceptorsFromDi()),
+  ],
+  providers: [
+    // When using HttpClientModule (older approach) or provideHttpClient(withInterceptorsFromDi())
+    // provideHttpClient() is typically called in app.config.ts for standalone apps
+    // and HttpClientModule imported in AppModule for module-based apps.
+    // The interceptors are then provided using HTTP_INTERCEPTORS.
+    { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
+    { provide: HTTP_INTERCEPTORS, useClass: LoggingInterceptor, multi: true },
+    { provide: HTTP_INTERCEPTORS, useClass: ErrorInterceptor, multi: true },
+  ],
+  // ... bootstrap component
+})
+export class AppModule {}
+```
+
+### Order of execution
+
+The order in which you list the interceptors in the `providers` array is important:
+
+- **Outgoing Request:** Interceptors are executed in the order they are provided. The first interceptor in the array processes the request first, then passes it to the second, and so on, until it reaches the backend.
+- **Incoming Response:** Interceptors are executed in the reverse order of how they were provided. The response from the backend first goes through the last provided interceptor, then the second to last, and so on, until it reaches the first interceptor and finally the service/component that made the request.
+
+In the example above, for an outgoing request, `AuthInterceptor` runs first, then `LoggingInterceptor`, then `ErrorInterceptor`. For an incoming response, `ErrorInterceptor` runs first, then `LoggingInterceptor`, then `AuthInterceptor`.
+
+## Further reading
+
+- [Angular Documentation: Intercepting requests and responses](https://angular.dev/guide/http/interceptors)
+- [Angular Documentation: provideHttpClient](https://angular.dev/api/common/http/provideHttpClient)
+- [Angular Documentation: HTTP_INTERCEPTORS](https://angular.dev/api/common/http/HTTP_INTERCEPTORS)

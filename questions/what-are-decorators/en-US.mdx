@@ -1,0 +1,174 @@
+---
+title: What are decorators?
+---
+
+## TL;DR
+
+Decorators in Angular are special kinds of declarations that can be attached to classes, methods, properties, or parameters. They are a TypeScript feature that provides a way to add metadata to code elements. Angular uses decorators extensively to configure classes and their members, telling Angular how they should be processed, instantiated, or interacted with.
+
+For example:
+
+- `@Component` tells Angular that a class is a component and provides configuration like its template, styles, and selector.
+- `@Injectable` tells Angular that a class can be injected into other classes, making it part of the dependency injection system.
+- `@Input` marks a property as an input binding, allowing data to flow into a component from its parent.
+- `@Output` marks a property as an output binding, allowing a component to emit events to its parent.
+
+Essentially, decorators are Angular's way of adding configuration and behavior hints directly within the code structure.
+
+---
+
+## What are decorators?
+
+Decorators are a language feature in TypeScript (and a proposal for future JavaScript standards) that provide a declarative way to add metadata or modify the behavior of classes, properties, methods, or parameters. They are essentially functions that are invoked at declaration time with information about the decorated declaration.
+
+In the context of Angular, decorators are fundamental. They are used to configure classes and their members, providing Angular with the necessary information to understand how to treat them within the application's architecture.
+
+## How Angular uses decorators
+
+Angular leverages decorators heavily to define the structure and behavior of its building blocks. Decorators tell Angular what role a class plays (e.g., is it a component, a service, a module?) and how its parts should interact with the framework and other parts of the application.
+
+This metadata is processed by Angular's compiler and runtime to set up dependency injection, component rendering, data binding, and other core functionalities.
+
+## Types of decorators in Angular
+
+Angular uses four main types of decorators:
+
+### Class decorators
+
+These are applied just before a class definition. They configure the class itself, defining its role within the Angular application.
+
+- **`@Component()`**: Marks a class as an Angular component. It requires configuration like `selector`, `templateUrl` or `template`, and `styleUrls` or `styles`.
+
+  ```typescript
+  import { Component } from '@angular/core';
+
+  @Component({
+    selector: 'app-my-component',
+    templateUrl: './my-component.html',
+    styleUrls: ['./my-component.css'],
+  })
+  export class MyComponent {
+    // Component logic
+  }
+  ```
+
+- **`@NgModule()`**: Marks a class as an Angular module. It configures the module with metadata like `declarations`, `imports`, `providers`, and `bootstrap`.
+
+  ```typescript
+  import { NgModule } from '@angular/core';
+  import { BrowserModule } from '@angular/platform-browser';
+  import { AppComponent } from './app.component';
+
+  @NgModule({
+    declarations: [AppComponent],
+    imports: [BrowserModule],
+    providers: [],
+    bootstrap: [AppComponent],
+  })
+  export class AppModule {}
+  ```
+
+- **`@Injectable()`**: Marks a class as a service that can be injected into other classes. Available from Angular 6 onwards, it's often used with the `providedIn` option for tree-shakable providers.
+
+  ```typescript
+  import { Injectable } from '@angular/core';
+
+  @Injectable({
+    providedIn: 'root', // Makes the service a singleton available throughout the app
+  })
+  export class MyService {
+    // Service logic
+  }
+  ```
+
+- **`@Directive()`**: Marks a class as an Angular directive. Similar to `@Component` but without a template.
+
+### Property decorators
+
+These are applied just before a property declaration within a class. They configure the behavior of that specific property.
+
+- **`@Input()`**: Declares a property as an input binding, allowing data to be passed into the component or directive from its parent component's template.
+
+  ```typescript
+  import { Component, Input } from '@angular/core';
+
+  @Component({
+    /* ... */
+  })
+  export class ChildComponent {
+    @Input() data: string; // Data can be passed like <app-child [data]="parentData"></app-child>
+  }
+  ```
+
+- **`@Output()`**: Declares a property as an output binding, typically an `EventEmitter`, allowing the component or directive to emit events that the parent component can listen to.
+
+  ```typescript
+  import { Component, Output, EventEmitter } from '@angular/core';
+
+  @Component({
+    /* ... */
+  })
+  export class ChildComponent {
+    @Output() buttonClicked = new EventEmitter<string>();
+
+    onClick() {
+      this.buttonClicked.emit('Button was clicked!');
+    }
+  }
+  ```
+
+- **`@ViewChild()` / `@ViewChildren()`**: Query for elements or directives within the component's template.
+- **`@ContentChild()` / `@ContentChildren()`**: Query for elements or directives projected into the component's `<ng-content>` slot.
+
+### Method decorators
+
+These are applied just before a method declaration within a class. They configure the behavior of that specific method.
+
+- **`@HostListener()`**: Declares a DOM event to listen for on the host element of the directive or component and provides a handler method to run when that event occurs.
+
+  ```typescript
+  import { Directive, HostListener } from '@angular/core';
+
+  @Directive({ selector: '[appHighlight]' })
+  export class HighlightDirective {
+    @HostListener('mouseenter') onMouseEnter() {
+      // React to mouse entering the host element
+    }
+
+    @HostListener('mouseleave') onMouseLeave() {
+      // React to mouse leaving the host element
+    }
+  }
+  ```
+
+### Parameter decorators
+
+These are applied just before a parameter in a class constructor or method. They provide metadata about the parameter, often used for dependency injection.
+
+- **`@Inject()`**: Manually specifies a dependency token for the dependency injector.
+
+  ```typescript
+  import { Component, Inject } from '@angular/core';
+  import { DOCUMENT } from '@angular/common';
+
+  @Component({
+    /* ... */
+  })
+  export class MyComponent {
+    constructor(@Inject(DOCUMENT) private document: Document) {
+      // Use the injected document object
+    }
+  }
+  ```
+
+- **`@Host()`**: Used in conjunction with `@Inject` or other injection decorators to specify that the dependency should be resolved from the host element's injector.
+- **`@Self()`**: Resolves the dependency only from the component's or directive's own injector.
+- **`@SkipSelf()`**: Resolves the dependency from any injector above the component's or directive's own injector in the hierarchy.
+- **`@Optional()`**: Makes the dependency optional; if it cannot be resolved, `null` is injected instead of throwing an error.
+
+In summary, decorators are the primary mechanism Angular uses to add configuration and metadata to your code, enabling the framework to understand and manage the different parts of your application.
+
+## Further reading
+
+- [Angular Documentation: Decorators](https://angular.dev/guide/decorators)
+- [TypeScript Handbook: Decorators](https://www.typescriptlang.org/docs/handbook/decorators.html)

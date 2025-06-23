@@ -1,0 +1,271 @@
+---
+title: How is data shared between components?
+---
+
+## TL;DR
+
+Data sharing between Angular components depends on their relationship:
+
+- **Parent to Child:** Use the `@Input()` decorator in the child component to receive data passed from the parent's template.
+- **Child to Parent:** Use the `@Output()` decorator and `EventEmitter` in the child component to emit events (often carrying data) that the parent component listens to in its template.
+- **Sibling or Unrelated Components:** Use a shared service. The service holds the data and provides methods to update and access it. Components inject the service and interact with it. For reactive data updates, the service typically uses RxJS Observables (`Subject`, `BehaviorSubject`) or Signals (available from Angular 17+).
+
+---
+
+## How is data shared between components?
+
+Angular provides several mechanisms for sharing data between components, depending on the relationship between them. The most common methods are using `@Input()` and `@Output()` for parent-child communication and using a shared service for sibling or unrelated components.
+
+### Parent to child communication using `@Input()`
+
+This is the most straightforward way to pass data down the component tree. The parent component passes data to the child component using property binding in the parent's template. The child component declares properties decorated with `@Input()` to receive this data.
+
+- The child component defines an input property using `@Input()`.
+- The parent component binds a value to this input property in the child's selector within the parent's template.
+
+**Example:**
+
+```typescript
+// child.component.ts
+import { Component, Input } from '@angular/core';
+
+@Component({
+  selector: 'app-child',
+  template: '<p>{{ message }}</p>',
+})
+export class ChildComponent {
+  @Input() message: string = ''; // Declare an input property
+}
+```
+
+```html
+<!-- parent.component.html -->
+<app-child [message]="parentMessage"></app-child>
+```
+
+```typescript
+// parent.component.ts
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-parent',
+  templateUrl: './parent.component.html',
+})
+export class ParentComponent {
+  parentMessage = 'Hello from parent!';
+}
+```
+
+### Child to parent communication using `@Output()` and `EventEmitter`
+
+To send data up from a child to a parent, the child component uses `@Output()` and `EventEmitter`. The child emits an event, and the parent component listens for this event in its template and reacts accordingly, often receiving data passed with the event.
+
+- The child component defines an output property using `@Output()`, initialized as an `EventEmitter`.
+- The child component calls the `emit()` method on the `EventEmitter` when it wants to send data to the parent.
+- The parent component binds to this output event in the child's selector within the parent's template using event binding `()`.
+
+**Example:**
+
+```typescript
+// child.component.ts
+import { Component, Output, EventEmitter } from '@angular/core';
+
+@Component({
+  selector: 'app-child',
+  template: '<button (click)="sendMessage()">Send Message to Parent</button>',
+})
+export class ChildComponent {
+  @Output() messageEvent = new EventEmitter<string>(); // Declare an output event emitter
+
+  sendMessage() {
+    this.messageEvent.emit('Hello from child!'); // Emit the event with data
+  }
+}
+```
+
+```html
+<!-- parent.component.html -->
+<app-child (messageEvent)="receiveMessage($event)"></app-child>
+<p *ngIf="childMessage">Message from child: {{ childMessage }}</p>
+```
+
+```typescript
+// parent.component.ts
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-parent',
+  templateUrl: './parent.component.html',
+})
+export class ParentComponent {
+  childMessage: string = '';
+
+  receiveMessage($event: string) {
+    this.childMessage = $event; // Handle the event and receive data
+  }
+}
+```
+
+### Sibling or unrelated components using a shared service
+
+For components that do not have a direct parent-child relationship (e.g., siblings, components in different routes, or deeply nested components), a shared service is the recommended approach.
+
+- A service is created to hold the shared data and provide methods to modify and access it.
+- The service is typically provided at a common ancestor module or component level (or `providedIn: 'root'`) so that all components needing to share data can inject the _same instance_ of the service.
+- Components inject the service via dependency injection.
+- For reactive data sharing (where components need to be notified when the data changes), the service often uses RxJS Observables (like `Subject` or `BehaviorSubject`) or Signals (available from Angular 17+).
+
+**Example using RxJS `BehaviorSubject`:**
+
+```typescript
+// data.service.ts
+import { Injectable } from '@angular/core';
+import { BehaviorSubject, Observable } from 'rxjs';
+
+@Injectable({
+  providedIn: 'root', // Makes the service a singleton available throughout the app
+})
+export class DataService {
+  private messageSource = new BehaviorSubject<string>('default message'); // Holds the current value and emits new values
+  currentMessage: Observable<string> = this.messageSource.asObservable(); // Expose as Observable
+
+  constructor() {}
+
+  changeMessage(message: string) {
+    this.messageSource.next(message); // Update the value
+  }
+}
+```
+
+```typescript
+// component-a.component.ts
+import { Component, OnInit } from '@angular/core';
+import { DataService } from '../data.service';
+
+@Component({
+  selector: 'app-component-a',
+  template: `
+    <p>Component A: {{ message }}</p>
+    <input type="text" #messageInput />
+    <button (click)="newMessage(messageInput.value)">Change Message</button>
+  `,
+})
+export class ComponentA implements OnInit {
+  message: string = '';
+
+  constructor(private dataService: DataService) {}
+
+  ngOnInit() {
+    this.dataService.currentMessage.subscribe(
+      message => (this.message = message)
+    ); // Subscribe to receive updates
+  }
+
+  newMessage(message: string) {
+    this.dataService.changeMessage(message); // Update the data via the service
+  }
+}
+```
+
+```typescript
+// component-b.component.ts
+import { Component, OnInit } from '@angular/core';
+import { DataService } from '../data.service';
+
+@Component({
+  selector: 'app-component-b',
+  template: '<p>Component B: {{ message }}</p>',
+})
+export class ComponentB implements OnInit {
+  message: string = '';
+
+  constructor(private dataService: DataService) {}
+
+  ngOnInit() {
+    this.dataService.currentMessage.subscribe(
+      message => (this.message = message)
+    ); // Subscribe to receive updates
+  }
+}
+```
+
+**Example using Signals (Available from Angular 17+):**
+
+```typescript
+// data.service.ts
+import { Injectable, signal } from '@angular/core';
+
+@Injectable({
+  providedIn: 'root',
+})
+export class DataService {
+  private _message = signal<string>('default message'); // Create a writable signal
+  readonly message = this._message.asReadonly(); // Expose as a readonly signal
+
+  constructor() {}
+
+  changeMessage(message: string) {
+    this._message.set(message); // Update the signal value
+  }
+}
+```
+
+```typescript
+// component-a.component.ts
+import { Component, signal } from '@angular/core';
+import { DataService } from '../data.service';
+
+@Component({
+  selector: 'app-component-a',
+  template: `
+    <p>Component A: {{ dataService.message() }}</p>
+    <!-- Access signal value -->
+    <input type="text" #messageInput />
+    <button (click)="newMessage(messageInput.value)">Change Message</button>
+  `,
+})
+export class ComponentA {
+  constructor(public dataService: DataService) {} // Make service public to access in template
+
+  newMessage(message: string) {
+    this.dataService.changeMessage(message);
+  }
+}
+```
+
+```typescript
+// component-b.component.ts
+import { Component } from '@angular/core';
+import { DataService } from '../data.service';
+
+@Component({
+  selector: 'app-component-b',
+  template: '<p>Component B: {{ dataService.message() }}</p>', // Access signal value
+})
+export class ComponentB {
+  constructor(public dataService: DataService) {} // Make service public to access in template
+}
+```
+
+### Other methods
+
+While less common for general component-to-component data sharing, other methods exist for specific scenarios:
+
+- **Route Parameters and State:** Data can be passed via the URL (parameters) or the router's state when navigating between components. This is useful for passing data related to the navigation context.
+- **Local Storage or Session Storage:** Data can be stored in the browser's storage. This is suitable for persisting data across page reloads or browser sessions, but not typically for real-time communication between active components.
+- **Template Reference Variables:** A parent component's template can directly access a child component instance using a template reference variable (`#childRef`), allowing the parent to call methods or access properties on the child. This is limited to direct parent-child relationships within the same template.
+
+### Choosing the right method
+
+The best approach depends on the relationship between the components and the nature of the data:
+
+- **Parent-Child:** Use `@Input()` and `@Output()`. This keeps communication explicit and components loosely coupled.
+- **Sibling/Unrelated:** Use a shared service. This centralizes data management and is suitable for complex state or communication across different parts of the application. Use RxJS or Signals within the service for reactive updates.
+- **Navigation-related:** Use route parameters or state.
+
+## Further reading
+
+- [Angular Docs: Component Interaction](https://angular.dev/guide/components/inputs-outputs)
+- [Angular Docs: Sharing Data with Services](https://angular.dev/guide/components/services)
+- [Angular Docs: Signals](https://angular.dev/guide/signals)
+- [Angular Docs: Routing - Passing Data to Route Components](https://angular.dev/guide/routing/common-router-tasks#pass-required-and-optional-information-to-route-parameters)

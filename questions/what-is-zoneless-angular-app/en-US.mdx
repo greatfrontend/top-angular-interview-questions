@@ -1,0 +1,117 @@
+---
+title: What is a zoneless Angular application and why is this mode significant?
+---
+
+## TL;DR
+
+A zoneless Angular application is one configured to run without `zone.js`, the library that traditionally monkey-patches browser async APIs (like `setTimeout`, `addEventListener`, `fetch`) to automatically notify Angular when something _might_ have changed, triggering change detection.
+
+The significance of zoneless mode lies in moving away from this automatic, potentially over-eager change detection mechanism. Instead, change detection is triggered explicitly by the developer (e.g., using `ChangeDetectorRef.markForCheck()`) or, more importantly, reactively by Angular's new Signals primitive.
+
+This approach offers several benefits:
+
+- **Improved Performance:** Change detection runs only when truly necessary, reducing unnecessary checks and improving application speed.
+- **Reduced Bundle Size:** The `zone.js` library is removed from the application bundle.
+- **Easier Debugging:** Stack traces are cleaner without the zone frames.
+- **Better Interoperability:** Fewer potential conflicts with third-party libraries that also interact with global async APIs.
+- **Enables Signals:** Zoneless mode is the natural environment for Signals, providing fine-grained, reactive updates without relying on broad zone notifications.
+
+Available from Angular 16 onwards as a developer preview, and becoming more stable and recommended with subsequent versions like Angular 17+.
+
+---
+
+## What are zones in Angular?
+
+Zones, specifically `zone.js`, are a mechanism used by Angular to automatically detect when changes might have occurred in your application's data. `zone.js` works by monkey-patching most asynchronous browser APIs, such as `setTimeout`, `setInterval`, `requestAnimationFrame`, `addEventListener`, `XMLHttpRequest`, and others.
+
+### How zones enable automatic change detection
+
+When an asynchronous operation patched by `zone.js` completes (e.g., a timer fires, an HTTP request finishes, a user clicks a button), `zone.js` intercepts the event. It then notifies Angular that an event has occurred within the Angular zone. This notification signals to Angular that data _might_ have changed, prompting it to run its change detection mechanism to update the view if necessary. This automatic detection is a core reason why Angular developers traditionally didn't need to manually tell the framework when to update the UI after an async event.
+
+## What are the challenges of using zones?
+
+While zones provide convenient automatic change detection, they come with certain drawbacks:
+
+### Performance overhead
+
+Patching numerous browser APIs and running change detection after _every_ asynchronous event, even if it doesn't affect the view, can introduce performance overhead, especially in complex applications with many asynchronous operations.
+
+### Debugging complexity
+
+Stack traces can become cluttered with zone frames, making it harder to trace the origin of errors.
+
+### Bundle size increase
+
+The `zone.js` library adds to the application's bundle size.
+
+### Interoperability issues
+
+Zones can sometimes conflict with other libraries that also modify global asynchronous APIs.
+
+## What is a zoneless Angular application?
+
+A zoneless Angular application is one configured to run _without_ the `zone.js` library. This means Angular no longer relies on `zone.js` to automatically detect when asynchronous operations complete and trigger change detection.
+
+### How change detection works in a zoneless application
+
+In a zoneless application, change detection is not automatic based on zone events. Instead, it must be triggered explicitly or reactively:
+
+- **Explicitly:** Developers can manually trigger change detection using methods like `ChangeDetectorRef.markForCheck()` followed by `ChangeDetectorRef.detectChanges()`, or simply `ChangeDetectorRef.detectChanges()`.
+- **Reactively:** The primary intended way to handle updates in modern zoneless Angular is by using Signals. When a Signal's value changes, it can automatically mark the components that depend on it as dirty, allowing Angular to efficiently update only the necessary parts of the view during the next change detection cycle.
+
+## Why is zoneless mode significant?
+
+Zoneless mode represents a significant shift in how Angular handles change detection, moving towards a more explicit and reactive model.
+
+### Improved performance
+
+By removing the reliance on `zone.js` and its broad notifications, change detection runs only when explicitly requested or when reactive primitives (like Signals) indicate a change. This reduces unnecessary checks across the component tree, leading to better performance, especially in large applications.
+
+### Reduced bundle size
+
+Removing the `zone.js` library decreases the overall size of the application bundle.
+
+### Easier debugging
+
+Stack traces are cleaner and easier to read without the frames introduced by `zone.js`.
+
+### Better interoperability
+
+Removing zone patching reduces the likelihood of conflicts with other JavaScript libraries that might also interact with global asynchronous APIs.
+
+### Alignment with modern web standards
+
+Moving away from monkey-patching global APIs aligns better with modern web development practices and provides developers with more direct control over application updates.
+
+### Enables Signals
+
+Zoneless mode is the ideal environment for Angular's new Signals API. Signals provide a fine-grained, reactive way to manage state and dependencies. In a zoneless application, changes to Signals efficiently trigger updates only where needed, without requiring a full component tree check initiated by a zone event. While Signals can work _with_ zones, their full performance benefits and the vision for future Angular development are realized in a zoneless setup.
+
+## How to enable zoneless mode
+
+Zoneless mode can be enabled during application bootstrapping.
+
+Available from Angular 16 onwards, you can configure it when bootstrapping your application using `bootstrapApplication`:
+
+```typescript
+import { bootstrapApplication } from '@angular/platform-browser';
+import { AppComponent } from './app/app.component';
+import { provideZoneChangeDetection } from '@angular/core';
+
+bootstrapApplication(AppComponent, {
+  providers: [
+    // Disable zone.js based change detection
+    provideZoneChangeDetection({ eventCoalescing: true, ngZone: 'noop' }),
+  ],
+}).catch(err => console.error(err));
+```
+
+Setting `ngZone` to `'noop'` effectively disables `zone.js` for change detection purposes. The `eventCoalescing` option is related to zone-based change detection optimization and is often included when discussing zone configuration, but the key part for zoneless is `ngZone: 'noop'`.
+
+For applications using NgModule, you would configure this in the root `AppModule`'s providers.
+
+## Further reading
+
+- [Angular Documentation: Zoneless](https://angular.dev/guide/change-detection/zoneless)
+- [Angular Documentation: Signals](https://angular.dev/guide/signals)
+- [Angular Documentation: Change Detection](https://angular.dev/guide/change-detection)

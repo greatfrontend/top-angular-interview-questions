@@ -1,0 +1,291 @@
+---
+title: How do you pass parameters in Angular routes?
+---
+
+## TL;DR
+
+You can pass parameters in Angular routes primarily in two ways:
+
+1.  **Route Parameters**: These are part of the URL path itself, typically used to identify a specific resource. You define them in the route configuration using a colon (`:`), like `path: 'items/:id'`. To navigate, you pass them as segments in the `router.navigate` array, for example, `this.router.navigate(['/items', itemId])`. In the target component, you read them using the `ActivatedRoute` service, accessing `this.route.snapshot.paramMap.get('id')` for the initial load or subscribing to `this.route.paramMap` for changes.
+2.  **Query Parameters**: These are appended to the URL after a question mark (`?`), used for optional values like filtering, sorting, or pagination. They are not defined in the route path. To navigate, you pass them in the `queryParams` object of the `router.navigate` options, like `this.router.navigate(['/items'], { queryParams: { category: 'electronics' } })`. In the target component, you read them using `ActivatedRoute`, accessing `this.route.snapshot.queryParamMap.get('category')` or subscribing to `this.route.queryParamMap`.
+
+---
+
+## Passing parameters in Angular routes
+
+Angular provides two main mechanisms for passing data or state between routes: route parameters and query parameters.
+
+### Route parameters
+
+Route parameters are segments of the URL path that represent dynamic values. They are typically used to identify a specific resource or item.
+
+### Defining route parameters
+
+You define route parameters in your route configuration within the `RouterModule.forRoot` or `RouterModule.forChild` call. You prefix the parameter name with a colon (`:`).
+
+```typescript
+// app-routing.module.ts
+import { NgModule } from '@angular/core';
+import { RouterModule, Routes } from '@angular/router';
+import { ItemDetailComponent } from './item-detail/item-detail.component';
+import { ItemListComponent } from './item-list/item-list.component';
+
+const routes: Routes = [
+  { path: 'items', component: ItemListComponent },
+  // Define a route parameter named 'id'
+  { path: 'items/:id', component: ItemDetailComponent },
+  { path: '', redirectTo: '/items', pathMatch: 'full' },
+];
+
+@NgModule({
+  imports: [RouterModule.forRoot(routes)],
+  exports: [RouterModule],
+})
+export class AppRoutingModule {}
+```
+
+In this example, `:id` is a route parameter for the `ItemDetailComponent`.
+
+### Navigating with route parameters
+
+When navigating programmatically using the `Router` service, you pass the parameter value as a segment in the array of path segments.
+
+```typescript
+import { Component } from '@angular/core';
+import { Router } from '@angular/router';
+
+@Component({
+  selector: 'app-item-list',
+  template: `
+    <h2>Item List</h2>
+    <ul>
+      <li *ngFor="let item of items" (click)="viewItem(item.id)">
+        {{ item.name }}
+      </li>
+    </ul>
+  `,
+})
+export class ItemListComponent {
+  items = [
+    { id: 1, name: 'Laptop' },
+    { id: 2, name: 'Keyboard' },
+  ];
+
+  constructor(private router: Router) {}
+
+  viewItem(itemId: number): void {
+    // Navigate to /items/1 or /items/2
+    this.router.navigate(['/items', itemId]);
+  }
+}
+```
+
+When navigating declaratively using `routerLink`, you also pass the parameter value as a segment in the array.
+
+```html
+<!-- In item-list.component.html -->
+<ul>
+  <li *ngFor="let item of items">
+    <a [routerLink]="['/items', item.id]">{{ item.name }}</a>
+  </li>
+</ul>
+```
+
+### Reading route parameters
+
+In the component that the route navigates to (`ItemDetailComponent` in this case), you can access the route parameters using the `ActivatedRoute` service.
+
+You can access the parameters synchronously using the `snapshot` property, which is useful for the initial load of the component.
+
+```typescript
+import { Component, OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+
+@Component({
+  selector: 'app-item-detail',
+  template: `
+    <h2>Item Detail</h2>
+    <p>Item ID: {{ itemId }}</p>
+    <!-- Display other item details -->
+  `,
+})
+export class ItemDetailComponent implements OnInit {
+  itemId: string | null = null;
+
+  constructor(private route: ActivatedRoute) {}
+
+  ngOnInit(): void {
+    // Access parameter from the snapshot
+    this.itemId = this.route.snapshot.paramMap.get('id');
+    console.log('Item ID from snapshot:', this.itemId);
+
+    // In a real app, you would fetch item data based on this ID
+  }
+}
+```
+
+For scenarios where the route parameters might change _without_ the component being re-created (e.g., navigating from `/items/1` to `/items/2` while staying on the `ItemDetailComponent`), you should subscribe to the `paramMap` observable.
+
+```typescript
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { ActivatedRoute, ParamMap } from '@angular/router';
+import { Subscription } from 'rxjs';
+import { switchMap } from 'rxjs/operators';
+
+@Component({
+  selector: 'app-item-detail',
+  template: `
+    <h2>Item Detail</h2>
+    <p>Item ID: {{ itemId }}</p>
+    <!-- Display other item details -->
+  `,
+})
+export class ItemDetailComponent implements OnInit, OnDestroy {
+  itemId: string | null = null;
+  private routeSubscription: Subscription | undefined;
+
+  constructor(private route: ActivatedRoute) {}
+
+  ngOnInit(): void {
+    // Subscribe to paramMap observable for changes
+    this.routeSubscription = this.route.paramMap.subscribe(
+      (params: ParamMap) => {
+        this.itemId = params.get('id');
+        console.log('Item ID from observable:', this.itemId);
+        // Fetch item data based on the new ID
+      }
+    );
+  }
+
+  ngOnDestroy(): void {
+    // Unsubscribe to prevent memory leaks
+    this.routeSubscription?.unsubscribe();
+  }
+}
+```
+
+Using `paramMap` (and `queryParamMap`) is generally preferred over the older `params` and `queryParams` because they return `ParamMap` objects, which provide a type-safe way to access parameters using `get()` and check for existence using `has()`.
+
+### Query parameters
+
+Query parameters are key-value pairs appended to the URL after a question mark (`?`). They are typically used for optional parameters like filters, sorting options, or pagination state. They are not part of the route path definition.
+
+### Navigating with query parameters
+
+You pass query parameters using the `queryParams` property in the options object of `router.navigate`.
+
+```typescript
+import { Component } from '@angular/core';
+import { Router } from '@angular/router';
+
+@Component({
+  selector: 'app-item-list',
+  template: `
+    <h2>Item List</h2>
+    <button (click)="filterByCategory('electronics')">Show Electronics</button>
+    <button (click)="filterByCategory('books')">Show Books</button>
+    <button (click)="clearFilter()">Show All</button>
+  `,
+})
+export class ItemListComponent {
+  constructor(private router: Router) {}
+
+  filterByCategory(category: string): void {
+    // Navigates to /items?category=electronics or /items?category=books
+    this.router.navigate(['/items'], { queryParams: { category: category } });
+  }
+
+  clearFilter(): void {
+    // Navigates to /items (removes query parameters)
+    this.router.navigate(['/items']);
+  }
+}
+```
+
+You can also use `queryParamsHandling` in the options to control how existing query parameters are handled when navigating.
+
+- `'merge'`: Merges new query parameters with existing ones.
+- `'preserve'`: Keeps all existing query parameters.
+
+```typescript
+// Example: Navigating from /items?sort=price to /items?sort=price&category=electronics
+this.router.navigate(['/items'], {
+  queryParams: { category: 'electronics' },
+  queryParamsHandling: 'merge',
+});
+```
+
+With `routerLink`, you use the `queryParams` input property.
+
+```html
+<!-- In item-list.component.html -->
+<a [routerLink]="['/items']" [queryParams]="{ category: 'electronics' }"
+  >Show Electronics</a
+>
+```
+
+### Reading query parameters
+
+Similar to route parameters, you use the `ActivatedRoute` service to read query parameters. You can use `snapshot.queryParamMap` for the initial load or subscribe to the `queryParamMap` observable for changes.
+
+```typescript
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { ActivatedRoute, ParamMap } from '@angular/router';
+import { Subscription } from 'rxjs';
+
+@Component({
+  selector: 'app-item-list',
+  template: `
+    <h2>Item List</h2>
+    <p>Current Category Filter: {{ categoryFilter || 'None' }}</p>
+    <!-- Display filtered items -->
+  `,
+})
+export class ItemListComponent implements OnInit, OnDestroy {
+  categoryFilter: string | null = null;
+  private queryParamSubscription: Subscription | undefined;
+
+  constructor(private route: ActivatedRoute) {}
+
+  ngOnInit(): void {
+    // Access query parameter from the snapshot
+    this.categoryFilter = this.route.snapshot.queryParamMap.get('category');
+    console.log('Category filter from snapshot:', this.categoryFilter);
+
+    // Subscribe to queryParamMap observable for changes
+    this.queryParamSubscription = this.route.queryParamMap.subscribe(
+      (params: ParamMap) => {
+        this.categoryFilter = params.get('category');
+        console.log('Category filter from observable:', this.categoryFilter);
+        // Apply filter to item list
+      }
+    );
+  }
+
+  ngOnDestroy(): void {
+    // Unsubscribe
+    this.queryParamSubscription?.unsubscribe();
+  }
+}
+```
+
+### Difference between route parameters and query parameters
+
+- **Route Parameters**:
+  - Part of the URL path (`/items/123`).
+  - Defined in the route configuration (`path: 'items/:id'`).
+  - Typically mandatory and used to identify a specific resource.
+  - Changing them usually implies navigating to a different resource.
+- **Query Parameters**:
+  - Appended to the URL after `?` (`/items?category=electronics`).
+  - Not defined in the route configuration.
+  - Typically optional and used for filtering, sorting, pagination, or passing state.
+  - Changing them usually refines the view of the _same_ resource or list.
+
+Choosing between them depends on the semantic meaning of the data being passed. If it's essential for identifying the resource, use a route parameter. If it's optional data to modify the view or state, use query parameters.
+
+## Further reading
+
+- [Angular Documentation: Routing & Navigation](https://angular.dev/guide/routing)
+- [Angular Documentation: ActivatedRoute](https://angular.dev/api/router/ActivatedRoute)
+- [Angular Documentation: Router.navigate](https://angular.dev/api/router/Router#navigate)

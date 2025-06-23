@@ -1,0 +1,134 @@
+---
+title: What is the dependency injection hierarchy in Angular?
+---
+
+## TL;DR
+
+Angular's dependency injection (DI) system works as a hierarchical tree of injectors, mirroring the component tree structure. When a component or service requests a dependency, Angular starts looking for a provider in that component's own injector. If not found, it walks up the injector tree to the parent component's injector, then its parent, and so on, until it reaches the root injector.
+
+The first provider found for the requested token is used to create or provide the dependency instance. This hierarchy determines the scope and lifetime of service instances:
+
+- Providers defined at the root level (e.g., using `@Injectable({ providedIn: 'root' })` or in the root `AppModule`) are typically singletons for the entire application.
+- Providers defined at the module level (in a lazy-loaded module's `providers` array) are singletons within that specific module's scope.
+- Providers defined at the component or directive level (in the `@Component` or `@Directive` `providers` array) create a new instance of the service for _each_ instance of that component or directive.
+
+This hierarchical lookup allows for both application-wide singletons and localized, component-specific service instances.
+
+---
+
+## What is the dependency injection hierarchy?
+
+Angular implements dependency injection (DI) using a hierarchical system of injectors. This hierarchy is closely related to the component tree structure of your application. Every component and directive in Angular has its own injector instance. These injectors form a tree, where a component's injector is a child of its parent component's injector.
+
+## How the hierarchy works
+
+When a component, directive, service, or any other class requests a dependency (usually through its constructor), Angular's DI system follows a specific process to resolve it:
+
+### Starting the search
+
+The search for a provider begins in the injector associated with the component or directive that is requesting the dependency.
+
+### Walking up the tree
+
+If the injector cannot find a provider for the requested dependency token within itself, it delegates the request to its parent injector. This process continues up the injector tree.
+
+### Finding a provider
+
+Angular continues walking up the tree, checking each parent injector in the hierarchy, until it finds the first injector that has a provider registered for the requested token.
+
+### Providing the instance
+
+Once a provider is found, Angular uses that provider to create an instance of the dependency (if one doesn't already exist in that injector's scope) and provides it to the requesting class.
+
+### Throwing an error
+
+If Angular reaches the root injector (the application's main injector) and still hasn't found a provider for the requested token, it throws an error, indicating that the dependency could not be resolved.
+
+## Where providers can be defined
+
+Providers can be registered at different levels within the Angular application, influencing where they are located in the injector hierarchy and thus their scope:
+
+### Root level (`providedIn: 'root'` or root NgModule)
+
+Providers registered at the root level are available throughout the entire application.
+
+- **Using `providedIn: 'root'`:** This is the recommended way for application-wide singletons. The service is tree-shakable if not used.
+  ```typescript
+  @Injectable({
+    providedIn: 'root',
+  })
+  export class AppStateService {
+    // ...
+  }
+  ```
+- **In the root `AppModule`'s `providers` array:** This also makes the service available globally, but it's not tree-shakable if unused.
+  `typescript
+    @NgModule({
+      // ...
+      providers: [
+        AnotherGlobalService
+      ],
+      // ...
+    })
+    export class AppModule { }
+    `
+  Services provided at the root level are typically singletons for the entire application.
+
+### Module level (`providedIn: 'platform'`, `providedIn: 'any'`, or lazy-loaded NgModule)
+
+- **Using `providedIn: 'platform'`:** Available to all applications running on the same platform (less common for typical web apps).
+- **Using `providedIn: 'any'`:** Available to any module that injects it. Each _module_ that injects it gets its own instance. Available from Angular 6 onwards.
+- **In a lazy-loaded module's `providers` array:** Services provided here are typically singletons _within the scope of that lazy-loaded module and its components_. Components within this module will get the same instance, but components outside this module (e.g., in the root module or another lazy module) will not have access to this specific instance unless they provide it themselves.
+
+### Component or directive level (`providers` array)
+
+Providers registered in the `providers` array of a `@Component` or `@Directive` decorator create a new instance of the service for _each_ new instance of that component or directive.
+
+```typescript
+@Component({
+  selector: 'app-my-component',
+  template: '<router-outlet></router-outlet>',
+  providers: [
+    ComponentSpecificService, // New instance for each MyComponent
+  ],
+})
+export class MyComponent {
+  constructor(private myService: ComponentSpecificService) {}
+}
+```
+
+If `MyComponent` is used multiple times in the application, each instance of `MyComponent` will receive its own unique instance of `ComponentSpecificService`. Child components of `MyComponent` that inject `ComponentSpecificService` will receive the _same_ instance provided by their parent `MyComponent`.
+
+### ViewProviders
+
+A special case is `viewProviders` in a `@Component` decorator. Providers listed here are only visible to the component's view and its content children. They are _not_ visible to content children projected into the component using `<ng-content>`. This is less common but useful for encapsulating dependencies strictly within the component's visual tree.
+
+```typescript
+@Component({
+  selector: 'app-parent',
+  template: `
+    <app-child></app-child>
+    <ng-content></ng-content>
+  `,
+  viewProviders: [
+    ViewScopedService, // Only visible to app-child, not projected content
+  ],
+})
+export class ParentComponent {}
+```
+
+## Effect on instance scope
+
+The level at which a provider is registered determines the scope and lifetime of the service instance:
+
+- **Root/Platform/Any:** Single instance shared across the specified scope (entire app, platform, or first injecting module).
+- **Lazy-loaded Module:** Single instance shared across the components and services within that specific lazy-loaded module.
+- **Component/Directive:** A new instance is created for _each_ instance of the component or directive. This instance is then shared with that component/directive and all its descendant components/directives (unless a descendant provides the same service itself, which would create a new, lower-level instance).
+
+This hierarchical structure and lookup mechanism are fundamental to how Angular manages dependencies and controls the lifetime and scope of service instances within an application.
+
+## Further reading
+
+- [Angular Documentation: Dependency Injection](https://angular.dev/guide/di)
+- [Angular Documentation: Hierarchical Injectors](https://angular.dev/guide/di/hierarchical-injectors)
+- [Angular Documentation: Controlling dependency scope with providedIn](https://angular.dev/guide/di/dependency-injection-in-action#controlling-dependency-scope-with-providedin)

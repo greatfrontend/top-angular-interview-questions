@@ -1,0 +1,190 @@
+---
+title: What is dependency injection in Angular?
+---
+
+## TL;DR
+
+Dependency Injection (DI) is a design pattern where a class receives its dependencies from an external source rather than creating them itself. In Angular, it's a core mechanism used to provide instances of services or other objects to components, directives, pipes, and other services.
+
+The main benefits are:
+
+- **Testability:** Easily swap real dependencies with mock versions for testing
+- **Maintainability:** Reduces coupling between classes
+- **Modularity:** Makes components and services more reusable
+
+Angular's DI system works with:
+
+- **Injectors:** Containers that hold and manage instances of dependencies
+- **Providers:** Configure how an injector should create an instance of a dependency
+- **Dependencies:** The objects or services that a class needs
+
+You typically inject dependencies into a class's constructor using the `@Injectable()` decorator on the dependency and type hinting:
+
+```typescript
+import { Injectable } from '@angular/core';
+
+@Injectable({
+  providedIn: 'root', // Makes the service a singleton available throughout the app
+})
+export class DataService {
+  getData() {
+    /* ... */
+  }
+}
+```
+
+```typescript
+import { Component } from '@angular/core';
+import { DataService } from './data.service';
+
+@Component({
+  /* ... */
+})
+export class MyComponent {
+  constructor(private dataService: DataService) {
+    // dataService is now an instance provided by Angular's DI
+  }
+}
+```
+
+Angular handles creating the `DataService` instance and providing it to `MyComponent`'s constructor based on the provider configuration.
+
+---
+
+## What is dependency injection?
+
+Dependency Injection (DI) is a software design pattern that implements the Inversion of Control (IoC) principle. Instead of a class creating or managing its own dependencies (other objects or services it needs to function), it receives them from an external source, typically a container or framework.
+
+Think of it like ordering food at a restaurant:
+
+- **Without DI:** You go into the kitchen and cook the food yourself (the class creates its own dependencies).
+- **With DI:** You tell the waiter what you want, and the kitchen prepares and delivers it to your table (an external system provides the dependencies to the class).
+
+## Why use dependency injection?
+
+Using dependency injection offers several significant advantages in application development:
+
+### Improved testability
+
+Classes become easier to test in isolation. You can easily provide mock or stub implementations of dependencies during unit tests, allowing you to focus on testing the logic of the class itself without relying on the actual behavior of its dependencies.
+
+### Reduced coupling
+
+DI decreases the tight coupling between classes. A class depends on an _interface_ or _type_ rather than a specific _implementation_. This makes it easier to swap out different implementations of a dependency without changing the class that uses it.
+
+### Enhanced maintainability and modularity
+
+Code becomes more organized and easier to understand. Dependencies are explicitly declared, making it clear what a class needs. This promotes modularity and makes refactoring or updating parts of the application simpler.
+
+### Increased reusability
+
+Components and services become more reusable because they don't hardcode their dependencies. They can be used in different contexts by providing different implementations of the required dependencies.
+
+## How Angular implements dependency injection
+
+Angular has its own sophisticated DI system that is fundamental to how applications are structured. It manages the creation and provision of dependencies throughout the application. The key concepts in Angular's DI are:
+
+### Injectors
+
+Injectors are responsible for creating and managing instances of dependencies. They hold a collection of configured providers and use them to instantiate dependencies when requested. Angular creates a hierarchical tree of injectors, mirroring the component tree.
+
+### Providers
+
+Providers tell an injector how to create an instance of a dependency. A provider maps a token (usually the class type of the dependency) to a recipe for creating the instance. This recipe can be:
+
+- Providing an instance of the class itself (`useClass`)
+- Providing an existing instance (`useExisting`)
+- Providing a factory function (`useFactory`)
+- Providing a simple value (`useValue`)
+
+The most common way to provide a service is using the `@Injectable()` decorator with the `providedIn` option.
+
+### Dependencies
+
+Dependencies are the objects or services that a class needs. These are typically instances of classes decorated with `@Injectable()`.
+
+## Providing dependencies
+
+You need to configure a provider for a dependency so that Angular's injector knows how to create it. Providers can be configured at different levels, affecting their scope and lifetime:
+
+### Root level (`providedIn: 'root'`)
+
+Available from Angular 6 onwards, the `providedIn: 'root'` option on the `@Injectable()` decorator is the preferred way to make a service a singleton available throughout the entire application. Angular creates a single instance in the root injector, and that same instance is injected wherever the service is requested. This is tree-shakable, meaning the service is only included in the final bundle if it's actually injected somewhere.
+
+```typescript
+import { Injectable } from '@angular/core';
+
+@Injectable({
+  providedIn: 'root', // Service is a singleton available everywhere
+})
+export class AppDataService {
+  // ...
+}
+```
+
+### Module level (`providers` array in `@NgModule`)
+
+You can list providers in the `providers` array of an `@NgModule`. This makes the service available to all components, directives, and services declared within that module. If the module is lazy-loaded, a new injector and a new instance of the service are created for that module. If the module is eagerly loaded, the service is provided in the root injector (similar to `providedIn: 'root'`) but is not tree-shakable.
+
+```typescript
+import { NgModule } from '@angular/core';
+import { FeatureService } from './feature.service';
+
+@NgModule({
+  providers: [
+    FeatureService, // Service available within this module
+  ],
+  // ...
+})
+export class FeatureModule {}
+```
+
+### Component level (`providers` array in `@Component`)
+
+You can list providers in the `providers` array of an `@Component()` decorator. This makes the service available only to that component and its descendants in the component tree. A new instance of the service is created for _each_ instance of the component.
+
+```typescript
+import { Component } from '@angular/core';
+import { ComponentScopedService } from './component-scoped.service';
+
+@Component({
+  selector: 'app-my-component',
+  template: '<p>Component scoped service</p>',
+  providers: [
+    ComponentScopedService, // New instance for each MyComponent
+  ],
+})
+export class MyComponent {
+  constructor(private scopedService: ComponentScopedService) {
+    // ...
+  }
+}
+```
+
+## Injecting dependencies
+
+Once a dependency is provided, you can inject it into a class (component, directive, pipe, or service) using constructor injection. Angular's DI system inspects the constructor's type hints and attempts to find a suitable provider in the current injector hierarchy.
+
+```typescript
+import { Component } from '@angular/core';
+import { AppDataService } from './app-data.service'; // Assume provided in root
+
+@Component({
+  selector: 'app-another-component',
+  template: '<p>Using injected service</p>',
+})
+export class AnotherComponent {
+  // Angular injects an instance of AppDataService here
+  constructor(private dataService: AppDataService) {
+    console.log('Data service injected:', this.dataService);
+  }
+}
+```
+
+Angular resolves the `AppDataService` dependency by looking up its provider in the injector associated with `AnotherComponent`. If not found there, it looks up the hierarchy until it finds a provider (in this case, the root injector).
+
+## Further reading
+
+- [Angular Documentation: Dependency Injection](https://angular.dev/guide/di)
+- [Angular Documentation: Providing Dependencies](https://angular.dev/guide/di/providing-dependencies)
+- [Angular Documentation: Dependency Injection in Action](https://angular.dev/guide/di/dependency-injection-in-action)

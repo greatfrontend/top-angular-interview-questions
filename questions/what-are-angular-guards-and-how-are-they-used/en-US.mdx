@@ -1,0 +1,229 @@
+---
+title: What are Angular Guards and how are they used?
+---
+
+## TL;DR
+
+Angular Guards are services that implement specific interfaces to control navigation within your application. They are used to protect routes by deciding if a user can activate a route (`CanActivate`), activate a child route (`CanActivateChild`), deactivate a route (`CanDeactivate`), load a lazy-loaded module (`CanLoad`), or match a route definition (`CanMatch`). They can also be used to pre-fetch data before a route is activated (`Resolve`).
+
+Guards are typically implemented as injectable services or, from Angular 14 onwards, as functions. They return a boolean (`true` to allow, `false` to deny) or a `UrlTree` (to redirect), or an `Observable` or `Promise` that resolves to one of these types.
+
+You apply guards to routes in your routing configuration using properties like `canActivate`, `canActivateChild`, `canDeactivate`, `canLoad`, `canMatch`, or `resolve`.
+
+For example, a simple `CanActivate` guard using the functional syntax (Angular 14+):
+
+```typescript
+// auth.guard.ts
+import { CanActivateFn, Router } from '@angular/router';
+import { inject } from '@angular/core';
+import { AuthService } from './auth.service'; // Assume you have an auth service
+
+export const authGuard: CanActivateFn = (route, state) => {
+  const authService = inject(AuthService);
+  const router = inject(Router);
+
+  if (authService.isAuthenticated()) {
+    return true; // Allow navigation
+  } else {
+    // Redirect to login page
+    return router.createUrlTree(['/login']);
+  }
+};
+
+// app-routing.module.ts
+import { Routes } from '@angular/router';
+import { DashboardComponent } from './dashboard/dashboard.component';
+import { authGuard } from './auth.guard';
+
+const routes: Routes = [
+  {
+    path: 'dashboard',
+    component: DashboardComponent,
+    canActivate: [authGuard], // Apply the guard here
+  },
+  // ... other routes
+];
+```
+
+---
+
+## What are Angular Guards?
+
+Angular Guards are classes or functions that implement specific interfaces provided by the `@angular/router` module. Their primary purpose is to control navigation and data fetching during the routing lifecycle. They act as gatekeepers, deciding whether the router should proceed with a requested navigation or data resolution.
+
+Guards are typically implemented as injectable services, allowing them to leverage dependency injection to access other services like authentication, authorization, or data services. From Angular 14 onwards, you can also implement guards as standalone functions, which is often a more concise approach, especially with the introduction of the `inject` function.
+
+## Why use Angular Guards?
+
+Guards are essential for implementing various navigation control scenarios in Angular applications:
+
+### Authentication and authorization
+
+Preventing unauthenticated or unauthorized users from accessing specific routes or sections of the application is a very common use case. A guard can check if a user is logged in or has the necessary permissions before allowing access.
+
+### Preventing unsaved changes
+
+If a user tries to navigate away from a form with unsaved changes, a `CanDeactivate` guard can prompt the user to confirm their action, preventing accidental data loss.
+
+### Pre-fetching data
+
+A `Resolve` guard can fetch necessary data for a component _before_ the route is activated. This ensures that the component has the data it needs immediately upon initialization, improving user experience by avoiding loading spinners after the route transition.
+
+### Controlling lazy loading
+
+`CanLoad` and `CanMatch` guards can prevent the loading of a lazy-loaded module chunk if the user doesn't meet certain criteria, saving bandwidth and improving initial load performance.
+
+## Types of Angular Guards
+
+Angular provides several interfaces for creating different types of guards:
+
+### CanActivate
+
+This guard determines if a route can be activated. It's commonly used for authentication checks. If it returns `false` or a `UrlTree` that resolves to `false`, the navigation to the route is cancelled.
+
+### CanActivateChild
+
+This guard determines if the child routes of a parent route can be activated. It's useful for applying a single check to all child routes within a section of your application (e.g., ensuring a user is authenticated before accessing any route within an admin area).
+
+### CanDeactivate
+
+This guard determines if a user can navigate away from a route. It's typically used to prevent users from leaving a page with unsaved data without confirmation.
+
+### CanLoad
+
+Available up to Angular 17, this guard determines if a lazy-loaded module can be loaded. If it returns `false`, the router won't even download the module chunk. This is useful for preventing unauthorized users from downloading code they shouldn't have access to.
+
+### CanMatch
+
+Available from Angular 14 onwards, this guard determines if a route definition matches the current URL. Unlike `CanLoad`, which prevents module loading, `CanMatch` prevents the router from using a specific route configuration even if the module might already be loaded (e.g., via preloading or eager loading). It's often preferred over `CanLoad` in modern applications, especially with standalone components and APIs.
+
+### Resolve
+
+This guard pre-fetches data needed for a route _before_ the route is activated. The fetched data is then available to the component via the `ActivatedRoute` snapshot's `data` property.
+
+## How to use Angular Guards
+
+Using Angular Guards involves three main steps:
+
+### Create the guard service or function
+
+You can generate a guard using the Angular CLI:
+
+```bash
+ng generate guard auth
+```
+
+The CLI will ask which interface(s) you want to implement. Choose the appropriate one(s) (e.g., `CanActivate`).
+
+If you choose the functional syntax (Angular 14+), the generated file will look something like this:
+
+```typescript
+import { CanActivateFn } from '@angular/router';
+
+export const authGuard: CanActivateFn = (route, state) => {
+  // Your logic here
+  return true; // or false, or a UrlTree
+};
+```
+
+If you choose the class-based syntax, it will look like this:
+
+```typescript
+import {
+  CanActivate,
+  ActivatedRouteSnapshot,
+  RouterStateSnapshot,
+  UrlTree,
+} from '@angular/router';
+import { Observable } from 'rxjs';
+import { Injectable } from '@angular/core';
+
+@Injectable({
+  providedIn: 'root',
+})
+export class AuthGuard implements CanActivate {
+  canActivate(
+    route: ActivatedRouteSnapshot,
+    state: RouterStateSnapshot
+  ):
+    | Observable<boolean | UrlTree>
+    | Promise<boolean | UrlTree>
+    | boolean
+    | UrlTree {
+    // Your logic here
+    return true; // or false, or a UrlTree
+  }
+}
+```
+
+Inside the guard's method (e.g., `canActivate`), you implement the logic to determine if navigation should be allowed. This logic often involves injecting and calling methods from other services (like an `AuthService`).
+
+### Implement the guard logic
+
+The guard method must return one of the following:
+
+- `boolean`: `true` allows navigation, `false` cancels it.
+- `UrlTree`: Cancels the current navigation and redirects to the URL specified by the `UrlTree`. This is useful for redirecting users (e.g., to a login page).
+- `Observable<boolean | UrlTree>` or `Promise<boolean | UrlTree>`: The router will wait for the Observable or Promise to resolve and then act based on the resolved value. This is necessary for asynchronous checks (e.g., checking authentication status with a backend API).
+
+Here's an example of a functional `CanActivate` guard that checks if a user is logged in and redirects if not:
+
+```typescript
+// src/app/guards/auth.guard.ts
+import { CanActivateFn, Router, UrlTree } from '@angular/router';
+import { inject } from '@angular/core';
+import { AuthService } from '../services/auth.service'; // Assume this service exists
+
+export const authGuard: CanActivateFn = (route, state): boolean | UrlTree => {
+  const authService = inject(AuthService);
+  const router = inject(Router);
+
+  if (authService.isLoggedIn()) {
+    return true; // User is logged in, allow access
+  } else {
+    // User is not logged in, redirect to login page
+    console.warn('Access denied. Redirecting to login.');
+    return router.createUrlTree(['/login'], {
+      queryParams: { returnUrl: state.url },
+    });
+  }
+};
+```
+
+### Apply the guard to routes
+
+In your routing configuration (`app-routing.module.ts` or a feature module's routing file), add the guard to the route definition using the appropriate property:
+
+```typescript
+// src/app/app-routing.module.ts
+import { NgModule } from '@angular/core';
+import { RouterModule, Routes } from '@angular/router';
+import { DashboardComponent } from './dashboard/dashboard.component';
+import { LoginComponent } from './login/login.component';
+import { authGuard } from './guards/auth.guard'; // Import the functional guard
+
+const routes: Routes = [
+  { path: 'login', component: LoginComponent },
+  {
+    path: 'dashboard',
+    component: DashboardComponent,
+    canActivate: [authGuard], // Apply the guard here
+  },
+  // ... other routes
+];
+
+@NgModule({
+  imports: [RouterModule.forRoot(routes)],
+  exports: [RouterModule],
+})
+export class AppRoutingModule {}
+```
+
+For class-based guards, you would list the class name in the array (e.g., `canActivate: [AuthGuard]`).
+
+You can apply multiple guards to a single route; they will be checked in the order they appear in the array. If any guard returns `false` or a `UrlTree`, the navigation is stopped or redirected immediately, and subsequent guards are not checked.
+
+## Further reading
+
+- [Angular Documentation on Guards](https://angular.dev/guide/routing/common-router-tasks#preventing-unauthorized-access)
+- [Angular Documentation on Functional Guards (Available from Angular 14)](https://angular.dev/guide/routing/functional-guards)

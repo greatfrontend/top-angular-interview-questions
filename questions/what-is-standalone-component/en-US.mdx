@@ -1,0 +1,197 @@
+---
+title: What is a standalone component?
+---
+
+## TL;DR
+
+A standalone component in Angular is a component, directive, or pipe that can be used without being declared in a NgModule. This is achieved by setting the `standalone: true` flag in its decorator.
+
+The main benefit is simplifying the Angular application structure by reducing the need for NgModules, especially for smaller components or applications. Instead of declaring dependencies in a NgModule, a standalone component directly imports the modules, components, directives, or pipes it needs in its own `imports` array.
+
+You can bootstrap an entire application using a standalone component and configure application-level providers directly during the bootstrap process. Standalone components are the default from Angular 17 onwards and are generally the recommended approach for new development.
+
+Here's a minimal example:
+
+```typescript
+import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common'; // Import necessary modules
+
+@Component({
+  selector: 'app-standalone-example',
+  standalone: true, // This makes it standalone
+  imports: [CommonModule], // Import dependencies directly
+  template: `
+    <p>This is a standalone component!</p>
+    <p *ngIf="true">Conditional content</p>
+  `,
+  styles: [],
+})
+export class StandaloneExampleComponent {
+  // Component logic
+}
+```
+
+---
+
+## What is a standalone component?
+
+A standalone component, directive, or pipe in Angular is an item that can be used directly in an application without being declared within the `declarations` array of an Angular NgModule. This capability is enabled by setting the `standalone` property to `true` in the item's decorator metadata.
+
+### How standalone components work
+
+Unlike traditional components that rely on NgModules to declare their existence and manage their dependencies, a standalone component manages its own dependencies. Any modules, components, directives, or pipes that the standalone component's template needs must be imported directly into the standalone component's own `imports` array.
+
+```typescript
+import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common'; // Needed for directives like *ngIf, *ngFor
+import { AnotherStandaloneComponent } from './another-standalone.component'; // Import other standalone components
+
+@Component({
+  selector: 'app-my-standalone',
+  standalone: true, // Marks this component as standalone
+  imports: [
+    CommonModule, // Import modules needed by the template
+    AnotherStandaloneComponent, // Import other standalone components/directives/pipes
+  ],
+  template: `
+    <p>Hello from my standalone component!</p>
+    <app-another-standalone></app-another-standalone>
+    <p *ngIf="true">This text is conditional.</p>
+  `,
+  styles: [
+    `
+      p {
+        color: blue;
+      }
+    `,
+  ],
+})
+export class MyStandaloneComponent {
+  // Component logic
+}
+```
+
+### Motivation for standalone components
+
+Standalone components were introduced to simplify the Angular development experience and application structure. Before standalone components, every component, directive, and pipe had to belong to exactly one NgModule. This often led to boilerplate code in NgModules, especially for small applications or components that were only used in one place. Standalone components reduce this overhead.
+
+### Availability
+
+Standalone components were introduced in Angular 14 and became the default option when generating new applications and components using the Angular CLI from Angular 17 onwards.
+
+## Benefits of using standalone components
+
+Using standalone components offers several advantages:
+
+### Reduced boilerplate
+
+You no longer need to declare components, directives, or pipes in the `declarations` array of a NgModule. This significantly reduces the amount of code needed, especially for simple components or libraries.
+
+### Simplified application structure
+
+Applications built entirely with standalone components can potentially eliminate the need for many NgModules, leading to a flatter and easier-to-understand project structure.
+
+### Improved tree-shaking
+
+By explicitly importing dependencies directly into the component that uses them, bundlers can potentially perform better tree-shaking, removing unused code more effectively.
+
+### Easier migration
+
+Standalone components provide a clear path for migrating existing NgModule-based applications incrementally. You can make components standalone one by one and gradually reduce the reliance on NgModules.
+
+### Better developer experience
+
+It's often clearer to see a component's direct dependencies listed in its own `imports` array rather than having to look up which NgModule it belongs to and then check that NgModule's `imports` and `exports`.
+
+## How to use standalone components
+
+### Creating a standalone component
+
+When generating a new component using the Angular CLI (from Angular 17 onwards), it's standalone by default:
+
+```bash
+ng generate component my-new-component
+```
+
+The generated component file will include `standalone: true` in its `@Component` decorator. If you are using an older CLI version or want to explicitly make it standalone, you can add the `--standalone` flag:
+
+```bash
+ng generate component my-standalone-component --standalone
+```
+
+For existing components, you can manually add `standalone: true` to the `@Component` decorator and move necessary imports from the associated NgModule's `imports` or `exports` array into the component's own `imports` array.
+
+### Bootstrapping a standalone application
+
+From Angular 14 onwards, you can bootstrap an application using a standalone component directly, typically your root `AppComponent`. This replaces the traditional `platformBrowserDynamic().bootstrapModule(AppModule)` call.
+
+```typescript
+// src/main.ts
+import { bootstrapApplication } from '@angular/platform-browser';
+import { AppComponent } from './app/app.component';
+import { provideRouter } from '@angular/router';
+import { APP_ROUTES } from './app/app.routes'; // Your application routes
+
+bootstrapApplication(AppComponent, {
+  providers: [
+    // Provide application-level services and configurations here
+    provideRouter(APP_ROUTES),
+    // ... other providers like provideHttpClient(), provideAnimations()
+  ],
+}).catch(err => console.error(err));
+```
+
+The `AppComponent` used here must be a standalone component (`standalone: true`). Application-level providers (like routing, HTTP client, animations) are configured in the `providers` array passed to `bootstrapApplication`.
+
+### Using standalone components in routing
+
+When defining routes, you can use the `loadComponent` property to lazy-load a standalone component directly, instead of `loadChildren` which loads a NgModule.
+
+```typescript
+// src/app/app.routes.ts
+import { Routes } from '@angular/router';
+import { HomeComponent } from './home/home.component'; // Standalone component
+
+export const APP_ROUTES: Routes = [
+  { path: '', component: HomeComponent }, // Eager loading
+  {
+    path: 'lazy',
+    loadComponent: () =>
+      import('./lazy/lazy.component').then(m => m.LazyComponent), // Lazy loading a standalone component
+  },
+  // ... other routes
+];
+```
+
+### Using standalone components within NgModule-based applications
+
+Standalone components can be seamlessly used within applications that still rely on NgModules. To use a standalone component inside a component declared in a NgModule, you simply import the standalone component into the NgModule's `imports` array.
+
+```typescript
+// src/app/app.module.ts
+import { NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+import { AppComponent } from './app.component'; // Declared in this module
+import { MyStandaloneComponent } from './my-standalone/my-standalone.component'; // Standalone component
+
+@NgModule({
+  declarations: [
+    AppComponent,
+    // Other components declared in this module
+  ],
+  imports: [
+    BrowserModule,
+    MyStandaloneComponent, // Import the standalone component here
+  ],
+  providers: [],
+  bootstrap: [AppComponent],
+})
+export class AppModule {}
+```
+
+You can then use `<app-my-standalone></app-my-standalone>` in the template of any component declared within `AppModule`.
+
+## Further reading
+
+- [Angular Documentation: Standalone components, directives, and pipes](https://angular.dev/guide/standalone)
+- [Angular Documentation: Bootstrapping](https://angular.dev/guide/bootstrapping)

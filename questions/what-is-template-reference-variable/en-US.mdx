@@ -1,0 +1,194 @@
+---
+title: What is a template reference variable?
+---
+
+## TL;DR
+
+A template reference variable is a way to get a reference to a DOM element, a component instance, a directive instance, or an `NgTemplateOutlet` within your Angular template. You declare it using the hash symbol (`#`) followed by a variable name, like `#myInput`.
+
+Once declared, you can use this variable anywhere within the same template to interact with the referenced item. For example, you can get the value of an input field (`#myInput.value`), call a method on a component instance (`#myComponent.someMethod()`), or access properties of a directive.
+
+To access a template reference variable from the component class code (e.g., in a method), you use the `@ViewChild` decorator.
+
+```html
+<input #nameInput type="text" />
+<button (click)="logInput(nameInput.value)">Log Value</button>
+
+<my-component #childComponent></my-component>
+<button (click)="callChildMethod(childComponent)">Call Child Method</button>
+```
+
+```typescript
+import { Component, ViewChild, ElementRef } from '@angular/core';
+import { MyComponent } from './my.component'; // Assuming MyComponent exists
+
+@Component({
+  selector: 'app-root',
+  templateUrl: './app.component.html',
+})
+export class AppComponent {
+  // Accessing the input element
+  @ViewChild('nameInput') nameInputRef!: ElementRef;
+
+  // Accessing the component instance
+  @ViewChild('childComponent') childComponentRef!: MyComponent;
+
+  logInput(value: string): void {
+    console.log('Input value:', value);
+    // Or using @ViewChild:
+    // console.log('Input value from ViewChild:', this.nameInputRef.nativeElement.value);
+  }
+
+  callChildMethod(child: MyComponent): void {
+    // Using the variable directly from the template context
+    child.someMethod();
+    // Or using @ViewChild:
+    // this.childComponentRef.someMethod();
+  }
+}
+```
+
+---
+
+## What is a template reference variable
+
+A template reference variable is a special variable declared within an Angular template that allows you to reference a specific element, component, directive, or `NgTemplateOutlet` instance from other parts of the same template. It provides a direct handle to the underlying object, enabling interaction with its properties and methods.
+
+## Declaring a template reference variable
+
+You declare a template reference variable by prefixing a variable name with the hash symbol (`#`). For example:
+
+```html
+<input #myInput type="text" />
+<button #myButton>Click Me</button>
+<my-component #myComponentInstance></my-component>
+```
+
+The variable name (`myInput`, `myButton`, `myComponentInstance`) can be any valid JavaScript variable name.
+
+## What a template reference variable references
+
+The value of a template reference variable depends on where you declare it:
+
+### Referencing a DOM element
+
+When placed on a standard HTML element (like `<input>`, `<button>`, `<div>`), the variable references the element's native DOM node.
+
+```html
+<input #nameInput type="text" />
+<button (click)="logValue(nameInput.value)">Log Input Value</button>
+```
+
+In this case, `nameInput` refers to the `<input>` DOM element, and `nameInput.value` accesses its current value.
+
+### Referencing a component instance
+
+When placed on a component element (like `<my-component>`), the variable references the instance of the component class.
+
+```html
+<my-component #childComponent></my-component>
+<button (click)="callChildMethod(childComponent)">Call Method on Child</button>
+```
+
+Here, `childComponent` refers to the instance of `MyComponent`, allowing you to access its public properties and methods (e.g., `childComponent.someMethod()`).
+
+### Referencing a directive instance
+
+When placed on an element that has an Angular directive applied, the variable can reference the directive instance. By default, if multiple directives are on the same element, the variable references the component instance (if it's a component element) or the DOM element. To explicitly reference a directive instance, you assign the directive's export name to the variable.
+
+For example, if you have a directive with `exportAs: 'myDirective'`, you can reference it like this:
+
+```html
+<div myDirective #directiveInstance="myDirective"></div>
+<button (click)="callDirectiveMethod(directiveInstance)">
+  Call Directive Method
+</button>
+```
+
+Here, `#directiveInstance="myDirective"` specifically references the instance of the `myDirective`.
+
+### Referencing an NgTemplateOutlet
+
+When used with `<ng-template>`, the variable references the `TemplateRef` instance. This is commonly used with structural directives like `*ngIf` or `*ngFor` when using the `<ng-template>` syntax, or with `NgTemplateOutlet`.
+
+```html
+<ng-template #myTemplate let-data="data">
+  <p>Template data: {{ data }}</p>
+</ng-template>
+
+<ng-container
+  *ngTemplateOutlet="myTemplate; context: { data: 'Hello' }"></ng-container>
+```
+
+Here, `#myTemplate` references the `TemplateRef` instance, which is then used by `*ngTemplateOutlet`.
+
+## Accessing the variable's value
+
+Template reference variables are primarily used within the template itself. You can access their properties or call their methods directly in:
+
+- Event bindings (`(click)="..."`)
+- Property bindings (`[value]="..."`)
+- Interpolation (`{{ ... }}`)
+
+```html
+<input #emailInput type="email" />
+<p>Current input value: {{ emailInput.value }}</p>
+<button [disabled]="!emailInput.value">Submit</button>
+```
+
+## Accessing from the component class
+
+While template reference variables are mainly for template-to-template interaction, you often need to access them from the component's TypeScript class. This is done using the `@ViewChild` or `@ViewChildren` decorators.
+
+- `@ViewChild`: Retrieves the _first_ element, component, or directive matching the selector.
+- `@ViewChildren`: Retrieves _all_ elements, components, or directives matching the selector as a `QueryList`.
+
+To access a template reference variable using `@ViewChild`:
+
+1.  Declare the template reference variable in the HTML.
+2.  In the component class, import `ViewChild` and `ElementRef` (or the component/directive type).
+3.  Use `@ViewChild('variableName')` to decorate a class property.
+
+```typescript
+import { Component, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+
+@Component({
+  selector: 'app-my-component',
+  template: `
+    <input #myInput type="text" />
+    <button (click)="focusInput()">Focus Input</button>
+  `,
+})
+export class MyComponent implements AfterViewInit {
+  // 'myInput' matches the template reference variable name
+  // ElementRef is used for DOM elements
+  @ViewChild('myInput') inputElement!: ElementRef;
+
+  ngAfterViewInit(): void {
+    // The element is available here after the view has been initialized
+    console.log('Input element:', this.inputElement.nativeElement);
+  }
+
+  focusInput(): void {
+    // Access the native DOM element via .nativeElement
+    this.inputElement.nativeElement.focus();
+  }
+}
+```
+
+When using `@ViewChild` or `@ViewChildren`, the decorated property is populated _after_ the view has been initialized. For `@ViewChild`, the value is available in `ngAfterViewInit`. For `@ViewChildren`, the `QueryList` is available in `ngAfterViewInit`, and its changes can be subscribed to.
+
+Note: For `@ViewChild` referencing elements or directives within an `*ngIf` or `*ngFor`, you might need to set the `static` flag to `false` (available from Angular 8 onwards) if you need access before `ngAfterViewInit`, although `ngAfterViewInit` is the standard place.
+
+## Common use cases
+
+- Getting the value of an input field.
+- Calling methods on child components or directives.
+- Accessing native DOM element properties or methods (e.g., `focus()`, `scrollIntoView()`).
+- Interacting with forms or specific form controls.
+- Working with `NgTemplateOutlet` to render dynamic templates.
+
+## Further reading
+
+- [Angular Documentation: Template reference variables](https://angular.dev/guide/templates/reference-variables)
+- [Angular Documentation: Reading element, component, and directive instances](https://angular.dev/guide/components/view-children)

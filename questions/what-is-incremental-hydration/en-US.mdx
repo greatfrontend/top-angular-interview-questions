@@ -1,0 +1,108 @@
+---
+title: What is incremental hydration?
+---
+
+## TL;DR
+
+Incremental hydration is a technique used in Angular Server-Side Rendering (SSR) applications to improve performance, specifically the Time To Interactive (TTI). Instead of hydrating the entire application's DOM and attaching event listeners all at once after the client-side JavaScript loads, incremental hydration allows Angular to hydrate and make individual components interactive incrementally. This means parts of your application become interactive sooner, leading to a faster perceived performance and a better user experience, especially on slower networks or devices. It preserves the server-rendered HTML structure and attaches behavior without re-rendering the entire page.
+
+---
+
+## What is hydration?
+
+Hydration is the process in Server-Side Rendering (SSR) applications where the client-side JavaScript takes over the static HTML rendered by the server. It involves:
+
+### Restoring application state
+
+The client-side application needs to pick up where the server left off, potentially restoring data or state that was used during the server render.
+
+### Attaching event listeners
+
+The primary goal is to make the static HTML interactive by attaching event handlers (like `click`, `submit`, etc.) to the corresponding DOM elements. Without hydration, the server-rendered page would just be static content.
+
+## Why is hydration needed?
+
+SSR provides benefits like faster initial page load (Time To First Byte - TTFB) and improved SEO because the server sends fully rendered HTML. However, this initial HTML is not interactive. Hydration is necessary to bridge the gap between the static server output and a fully functional, interactive client-side application.
+
+## Traditional hydration (full hydration)
+
+In traditional or "full" hydration, the entire client-side application's JavaScript bundle must download and execute. Once loaded, the framework traverses the entire server-rendered DOM tree and attaches event listeners and restores state for the _entire_ application at once.
+
+### Drawbacks of full hydration
+
+- **Blocking the main thread:** The process of traversing the DOM and attaching listeners for the whole application can be a computationally expensive task that blocks the browser's main thread, delaying interactivity.
+- **Large script execution:** The user has to wait for the entire application's JavaScript to download and execute before any part of the page becomes interactive.
+- **Potential for "flicker":** In some cases, the client-side application might re-render parts of the DOM, leading to a noticeable flicker or content shift if the client-side output doesn't perfectly match the server-rendered HTML.
+
+## What is incremental hydration?
+
+Incremental hydration is an optimization technique where the client-side application hydrates and makes _parts_ of the server-rendered page interactive incrementally, rather than hydrating the entire page at once.
+
+## How it works in Angular
+
+Available from Angular 16 onwards, Angular's implementation of hydration is incremental and component-based.
+
+### Preserving server-rendered DOM
+
+Angular's hydration mechanism preserves the existing server-rendered DOM structure. It doesn't discard and re-render the HTML from scratch.
+
+### Component-level hydration
+
+Angular identifies the components within the server-rendered HTML. Instead of hydrating the whole application tree, it hydrates individual components or groups of components as needed.
+
+### Attaching listeners
+
+Angular attaches event listeners directly to the existing DOM elements rendered by the server, component by component, as they are hydrated.
+
+### How it improves performance
+
+By hydrating components incrementally, the browser's main thread is blocked for shorter periods. Parts of the application become interactive sooner, improving metrics like Time To Interactive (TTI) and First Input Delay (FID).
+
+## Benefits of incremental hydration
+
+### Improved Time To Interactive (TTI)
+
+Users can interact with parts of the page much sooner, even if the entire application JavaScript hasn't finished loading or executing.
+
+### Faster perceived performance
+
+The application feels more responsive and ready to use quickly.
+
+### Reduced main thread blocking
+
+Breaking down the hydration work into smaller chunks prevents long tasks that can freeze the browser tab.
+
+### Seamless user experience
+
+By preserving the server-rendered DOM, it avoids potential flickering or layout shifts that can occur when the client re-renders the entire page.
+
+### Better performance on low-end devices and slow networks
+
+The incremental nature means less work is done upfront, making the application more usable on less powerful devices or unreliable network conditions.
+
+## Configuration
+
+Incremental hydration is part of Angular's hydration feature. To use it, you typically enable hydration when setting up SSR.
+
+From Angular 17 onwards, hydration is enabled by default when you add SSR to a new or existing project using `@angular/ssr`.
+
+For example, in your `app.module.ts` (or `app.config.ts` for standalone apps):
+
+```typescript
+import { provideClientHydration } from '@angular/platform-browser';
+// ... other imports
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    // ... other providers
+    provideClientHydration(),
+  ],
+};
+```
+
+This single configuration enables Angular's built-in hydration, which is incremental.
+
+## Further reading
+
+- [Angular Guide: Hydration](https://angular.dev/guide/hydration)
+- [Angular Blog: Hydration in Angular 16](https://blog.angular.io/introducing-hydration-in-angular-16-4120e230785e)

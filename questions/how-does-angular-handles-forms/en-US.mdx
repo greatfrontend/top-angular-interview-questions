@@ -1,0 +1,157 @@
+---
+title: How does Angular handle forms?
+---
+
+## TL;DR
+
+Angular handles forms primarily through two distinct approaches: Template-driven forms and Reactive forms.
+
+- **Template-driven forms** are simpler and suitable for basic forms. They rely heavily on directives like `ngModel` and `ngForm` directly within the template to manage form state and validation. The logic is largely handled by Angular directives in the HTML.
+- **Reactive forms** are more robust and scalable, ideal for complex forms. They build the form model programmatically in the component class using classes like `FormControl`, `FormGroup`, and `FormArray`. This approach offers better testability, predictability, and control over form data flow and validation.
+
+Choose Template-driven for simple forms and Reactive for more complex scenarios or when testability is a priority.
+
+---
+
+## How Angular handles forms
+
+Angular provides powerful tools and techniques for managing user input through forms. It offers two main approaches to handle forms: Template-driven forms and Reactive forms. Both approaches manage form data flow, validation, and state, but they differ significantly in how the form model is created and managed.
+
+### Template-driven forms
+
+Template-driven forms are built by adding directives directly into your template HTML. They are suitable for simple forms where minimal logic is required in the component class.
+
+- **How they work**: They rely on directives like `ngModel` to create `FormControl` instances implicitly for each input element. The `ngForm` directive automatically creates a `FormGroup` to wrap all controls within the form. Validation attributes (like `required`, `minlength`) are used directly in the template.
+- **Setup**: You need to import `FormsModule` into your application or feature module.
+- **Pros**:
+  - Easy to set up for basic forms
+  - Familiar syntax using HTML attributes
+- **Cons**:
+  - Less scalable for complex forms
+  - Logic and validation are scattered within the template, making testing harder
+  - Relies on mutable data changes via two-way data binding (`[(ngModel)]`)
+
+```html
+<!-- app.component.html -->
+<form #userForm="ngForm" (ngSubmit)="onSubmit(userForm)">
+  <div>
+    <label for="name">Name:</label>
+    <input
+      type="text"
+      id="name"
+      name="name"
+      [(ngModel)]="user.name"
+      required
+      minlength="4" />
+    <div
+      *ngIf="userForm.controls['name']?.invalid && (userForm.controls['name']?.dirty || userForm.controls['name']?.touched)">
+      <div *ngIf="userForm.controls['name']?.errors?.['required']">
+        Name is required
+      </div>
+      <div *ngIf="userForm.controls['name']?.errors?.['minlength']">
+        Name must be at least 4 characters long
+      </div>
+    </div>
+  </div>
+  <button type="submit" [disabled]="userForm.invalid">Submit</button>
+</form>
+```
+
+```typescript
+// app.component.ts
+import { Component } from '@angular/core';
+import { NgForm } from '@angular/forms'; // Import NgForm type
+
+@Component({
+  selector: 'app-root',
+  templateUrl: './app.component.html',
+})
+export class AppComponent {
+  user = { name: '' };
+
+  onSubmit(form: NgForm): void {
+    console.log('Form submitted!', form.value);
+    // Typically send data to a service here
+  }
+}
+```
+
+### Reactive forms
+
+Reactive forms provide a model-driven approach to handling form inputs. The form model is defined programmatically in the component class, offering greater control, predictability, and testability.
+
+- **How they work**: You explicitly create instances of `FormControl`, `FormGroup`, and `FormArray` in your component class to represent the form structure. These objects are then linked to the template using directives like `formControlName` or `formGroupName`. Data flow is unidirectional (from model to view and view changes trigger model updates via observables).
+- **Setup**: You need to import `ReactiveFormsModule` into your application or feature module.
+- **Pros**:
+  - More scalable and maintainable for complex forms
+  - Easier to test because the form model is defined in the component class
+  - Predictable data flow using observables
+  - Better handling of dynamic forms and complex validation scenarios
+  - Immutability (changes result in new state)
+- **Cons**:
+  - Requires more setup code in the component class
+
+```html
+<!-- app.component.html -->
+<form [formGroup]="userForm" (ngSubmit)="onSubmit()">
+  <div>
+    <label for="name">Name:</label>
+    <input type="text" id="name" formControlName="name" />
+    <div
+      *ngIf="userForm.get('name')?.invalid && (userForm.get('name')?.dirty || userForm.get('name')?.touched)">
+      <div *ngIf="userForm.get('name')?.errors?.['required']">
+        Name is required
+      </div>
+      <div *ngIf="userForm.get('name')?.errors?.['minlength']">
+        Name must be at least 4 characters long
+      </div>
+    </div>
+  </div>
+  <button type="submit" [disabled]="userForm.invalid">Submit</button>
+</form>
+```
+
+```typescript
+// app.component.ts
+import { Component } from '@angular/core';
+import { FormGroup, FormControl, Validators } from '@angular/forms'; // Import form classes
+
+@Component({
+  selector: 'app-root',
+  templateUrl: './app.component.html',
+})
+export class AppComponent {
+  userForm = new FormGroup({
+    name: new FormControl('', [Validators.required, Validators.minlength(4)]),
+    // Add more controls here
+  });
+
+  onSubmit(): void {
+    if (this.userForm.valid) {
+      console.log('Form submitted!', this.userForm.value);
+      // Typically send data to a service here
+    }
+  }
+}
+```
+
+### Form validation
+
+Both Template-driven and Reactive forms support validation.
+
+- **Template-driven**: Uses HTML5 validation attributes (`required`, `minlength`, `maxlength`, `pattern`) and Angular directives. Custom validators are harder to implement and test.
+- **Reactive**: Uses validator functions (`Validators.required`, `Validators.minlength`, etc.) passed when creating `FormControl` instances. Custom validators are functions that return a validation error object or `null`, making them easy to write and test. Asynchronous validators are also well-supported.
+
+Both approaches expose form state properties (`valid`, `invalid`, `dirty`, `pristine`, `touched`, `untouched`) on the form and individual controls, allowing you to provide visual feedback to the user.
+
+### Form submission
+
+Form submission is typically handled by listening to the form's `ngSubmit` (Template-driven) or `ngSubmit` (Reactive) event and calling a method in the component class. Inside the method, you can access the form's value and state to process the data.
+
+In summary, Angular provides a flexible and structured way to handle forms, allowing developers to choose the approach that best fits the complexity and requirements of their application.
+
+## Further reading
+
+- [Angular Forms Overview](https://angular.dev/guide/forms)
+- [Reactive Forms Guide](https://angular.dev/guide/forms/reactive-forms)
+- [Template-driven Forms Guide](https://angular.dev/guide/forms/template-driven-forms)

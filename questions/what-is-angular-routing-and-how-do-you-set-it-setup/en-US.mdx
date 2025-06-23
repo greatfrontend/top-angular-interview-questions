@@ -1,0 +1,211 @@
+---
+title: What is Angular Routing and how do you set it up?
+---
+
+## TL;DR
+
+Angular Routing is a mechanism that allows you to navigate between different views or components in your single-page application (SPA) without requiring a full page reload. It maps URL paths to specific components, enabling features like deep linking, browser history navigation, and organized application structure.
+
+To set it up:
+
+1.  **Include the Router Module**: When creating a new project with the Angular CLI, you can add routing automatically. For an existing project, import `RouterModule` from `@angular/router` into your main application module (usually `AppModule`).
+2.  **Define Routes**: Create an array of `Route` objects, typically in a separate file like `app-routing.module.ts`. Each route object specifies a `path` (the URL segment) and the `component` to display when that path is active.
+
+    ```typescript
+    import { Routes, RouterModule } from '@angular/router';
+    import { HomeComponent } from './home/home.component';
+    import { AboutComponent } from './about/about.component';
+
+    const routes: Routes = [
+      { path: '', component: HomeComponent }, // Default route
+      { path: 'about', component: AboutComponent },
+      { path: '**', redirectTo: '' }, // Wildcard route for unmatched paths
+    ];
+    ```
+
+3.  **Configure the Root Module**: Import the `routes` array and use `RouterModule.forRoot(routes)` in the `imports` array of your main application module (`AppModule`). Feature modules use `RouterModule.forChild(routes)`.
+4.  **Add the Router Outlet**: Place the `<router-outlet></router-outlet>` directive in your main application template (usually `app.component.html`). This is where Angular will render the component corresponding to the current route.
+5.  **Create Navigation Links**: Use the `routerLink` directive on anchor tags (`<a>`) instead of `href` to create navigation links.
+    ```html
+    <a routerLink="/">Home</a> <a routerLink="/about">About</a>
+    ```
+
+This setup allows Angular to intercept browser navigation, match the URL to a defined route, and display the associated component in the router outlet.
+
+---
+
+## What is Angular Routing?
+
+Angular Routing is a core feature of the Angular framework that enables navigation between different views or components within a single-page application (SPA). Instead of the browser requesting a new HTML page from the server for every link click, Angular's router intercepts the request, determines which component should be displayed based on the URL path, and dynamically renders that component within a designated area of the page.
+
+This approach provides several benefits:
+
+- **Single-Page Application Experience**: Users experience faster transitions between views as only parts of the page are updated, not the entire page reloaded.
+- **Deep Linking**: Specific URLs can be bookmarked or shared, allowing users to land directly on a particular view within the application.
+- **Browser History Integration**: The router interacts with the browser's history API, allowing users to use the back and forward buttons.
+- **Modular Application Structure**: Routing helps organize the application into distinct sections or features, each represented by a route and its associated components.
+
+## Why use Angular Routing?
+
+Using Angular Routing is fundamental for building anything beyond the simplest single-component applications. It provides the necessary infrastructure to:
+
+- **Manage Application State via URL**: The URL becomes a representation of the application's current state or view.
+- **Enable Navigation**: Allows users to move between different parts of the application in a structured way.
+- **Support Complex Layouts**: Different routes can render different sets of components or even entirely different layouts.
+- **Implement Features like Lazy Loading**: Routing is essential for loading feature modules only when they are needed, improving initial load performance.
+
+## Setting up Angular Routing
+
+Setting up routing involves defining the possible navigation paths and telling Angular where to display the components associated with those paths.
+
+### Initial Project Setup
+
+When you create a new Angular project using the Angular CLI, you are typically asked if you would like to add Angular routing. If you answer yes, the CLI automatically sets up a basic routing module (`app-routing.module.ts`), configures the main application module (`app.module.ts`) to use it, and adds the `<router-outlet>` to the main application template (`app.component.html`).
+
+```bash
+ng new my-routed-app --routing
+```
+
+### Adding Routing to an Existing Project
+
+If you didn't add routing during project creation, you can add it manually:
+
+1.  Generate a routing module (optional but recommended for organization):
+    ```bash
+    ng generate module app-routing --flat --module=app
+    ```
+    The `--flat` flag puts the file in `src/app` instead of its own folder. The `--module=app` flag imports the `AppRoutingModule` into the `AppModule`.
+2.  Open `src/app/app.module.ts` and ensure `AppRoutingModule` is imported and listed in the `imports` array.
+3.  Open `src/app/app-routing.module.ts` (or your main routing file) and import `RouterModule` and `Routes` from `@angular/router`.
+4.  Define your routes array (see "Defining Routes" below).
+5.  In `app-routing.module.ts`, add `RouterModule.forRoot(routes)` to the `imports` array and export `RouterModule`.
+
+```typescript
+// src/app/app-routing.module.ts
+import { NgModule } from '@angular/core';
+import { RouterModule, Routes } from '@angular/router';
+import { HomeComponent } from './home/home.component'; // Example component
+import { AboutComponent } from './about/about.component'; // Example component
+
+const routes: Routes = [
+  // Define your routes here
+  { path: '', component: HomeComponent },
+  { path: 'about', component: AboutComponent },
+];
+
+@NgModule({
+  imports: [RouterModule.forRoot(routes)],
+  exports: [RouterModule],
+})
+export class AppRoutingModule {}
+```
+
+```typescript
+// src/app/app.module.ts
+import { NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+
+import { AppRoutingModule } from './app-routing.module'; // Import the routing module
+import { AppComponent } from './app.component';
+import { HomeComponent } from './home/home.component'; // Import components used in routes
+import { AboutComponent } from './about/about.component'; // Import components used in routes
+
+@NgModule({
+  declarations: [
+    AppComponent,
+    HomeComponent, // Declare components used in routes
+    AboutComponent, // Declare components used in routes
+  ],
+  imports: [
+    BrowserModule,
+    AppRoutingModule, // Add the routing module to imports
+  ],
+  providers: [],
+  bootstrap: [AppComponent],
+})
+export class AppModule {}
+```
+
+### Defining Routes
+
+Routes are defined as an array of `Route` objects. Each object typically has at least a `path` and a `component`.
+
+```typescript
+import { Routes } from '@angular/router';
+import { DashboardComponent } from './dashboard/dashboard.component';
+import { SettingsComponent } from './settings/settings.component';
+import { PageNotFoundComponent } from './page-not-found/page-not-found.component';
+
+const routes: Routes = [
+  { path: 'dashboard', component: DashboardComponent },
+  { path: 'settings', component: SettingsComponent },
+  { path: '', redirectTo: '/dashboard', pathMatch: 'full' }, // Default route
+  { path: '**', component: PageNotFoundComponent }, // Wildcard route for any unmatched path
+];
+```
+
+- `path`: The URL segment. An empty string `''` usually represents the default path (e.g., the root of the application).
+- `component`: The component to display when the path matches.
+- `redirectTo`: Used to redirect from one path to another.
+- `pathMatch`: Specifies how the router should match the URL path. `'full'` means the entire URL path must match the `path` property. `'prefix'` (the default) means the URL path must start with the `path` property. Use `'full'` for redirects like the default route.
+- `**`: The wildcard path matches any URL that doesn't match a previously defined route. It's typically used for a 404 "Page Not Found" component.
+
+### Configuring the Router Outlet
+
+The `<router-outlet>` directive is a placeholder component provided by the `RouterModule`. Angular dynamically loads and renders the component associated with the current route inside this outlet. You typically place it in your main application component's template (`app.component.html`).
+
+```html
+<!-- src/app/app.component.html -->
+<h1>My Angular App</h1>
+<nav>
+  <a routerLink="/">Home</a> |
+  <a routerLink="/about">About</a>
+</nav>
+<hr />
+<!-- The router outlet is where routed components will be displayed -->
+<router-outlet></router-outlet>
+```
+
+### Creating Navigation Links
+
+Instead of using standard `href` attributes on anchor tags (`<a>`), you use the `routerLink` directive. The `routerLink` directive prevents the browser's default full page reload behavior and instead delegates navigation to the Angular router.
+
+```html
+<a routerLink="/dashboard">Go to Dashboard</a>
+<a routerLink="/settings">Settings</a>
+<a routerLink="/">Home (using default route)</a>
+```
+
+You can also pass parameters to routes using `routerLink` with an array:
+
+```html
+<a [routerLink]="['/products', productId]">View Product</a>
+```
+
+## Basic Route Configuration
+
+A basic route configuration involves mapping a URL path to a component.
+
+```typescript
+// In your routes array
+const routes: Routes = [
+  { path: 'home', component: HomeComponent },
+  { path: 'users', component: UsersListComponent },
+  { path: 'users/:id', component: UserDetailComponent }, // Route with a parameter
+  // ... other routes
+];
+```
+
+In the example above:
+
+- `/home` displays `HomeComponent`.
+- `/users` displays `UsersListComponent`.
+- `/users/123` displays `UserDetailComponent`, and the component can access the `id` parameter (`123`) from the route.
+
+This fundamental setup provides the basis for navigating between different views in your Angular application. More advanced configurations include child routes, route guards, resolvers, and lazy loading, all built upon this core routing mechanism.
+
+## Further reading
+
+- [Angular Documentation: Routing and Navigation](https://angular.dev/guide/routing)
+- [Angular Documentation: RouterLink](https://angular.dev/api/router/RouterLink)
+- [Angular Documentation: RouterOutlet](https://angular.dev/api/router/RouterOutlet)

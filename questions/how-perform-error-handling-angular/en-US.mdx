@@ -1,0 +1,232 @@
+---
+title: How do you perform error handling?
+---
+
+## TL;DR
+
+In Angular, error handling typically involves several strategies depending on the type of error. For asynchronous operations, especially HTTP requests using Observables, you use the `catchError` operator from RxJS to intercept errors and handle them within the Observable stream. For centralized handling of HTTP errors across your application, you implement an `HttpInterceptor` where you can catch errors, log them, show notifications, or redirect users. For global runtime errors that occur outside of specific Observable streams (like template errors, lifecycle hook errors, etc.), you can provide a custom implementation of the `ErrorHandler` class to catch and report these errors application-wide. It's also crucial to provide user-friendly feedback and log errors for debugging.
+
+---
+
+## Handling errors in Angular
+
+Robust error handling is essential for building stable and user-friendly Angular applications. Angular provides several mechanisms to handle different types of errors that can occur.
+
+### Handling asynchronous errors with RxJS `catchError`
+
+The most common place to handle errors in Angular is within asynchronous operations, particularly when using Observables for HTTP requests or other asynchronous tasks. The `catchError` operator from RxJS is specifically designed for this purpose.
+
+- `catchError` intercepts an error notification from an Observable stream
+- It allows you to handle the error and return a new Observable, effectively continuing the stream or transforming the error into a different outcome (like returning a default value or re-throwing a different error)
+- It's typically used within a `pipe` on the Observable
+
+```typescript
+import { Injectable } from '@angular/core';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Observable, throwError } from 'rxjs';
+import { catchError } from 'rxjs/operators';
+
+@Injectable({
+  providedIn: 'root',
+})
+export class DataService {
+  private apiUrl = '/api/items';
+
+  constructor(private http: HttpClient) {}
+
+  getItems(): Observable<any[]> {
+    return this.http.get<any[]>(this.apiUrl).pipe(
+      catchError(this.handleError) // Use catchError to handle potential errors
+    );
+  }
+
+  private handleError(error: HttpErrorResponse): Observable<never> {
+    let errorMessage = 'An unknown error occurred!';
+    if (error.error instanceof ErrorEvent) {
+      // Client-side or network error occurred
+      console.error('An error occurred:', error.error.message);
+      errorMessage = `Client error: ${error.error.message}`;
+    } else {
+      // The backend returned an unsuccessful response code
+      console.error(
+        `Backend returned code ${error.status}, body was: `,
+        error.error
+      );
+      errorMessage = `Server error: ${error.status} - ${error.message}`;
+    }
+    // Log the error or send it to a logging service
+    console.error('Full error object:', error);
+
+    // Return an observable with a user-facing error message
+    return throwError(() => new Error(errorMessage));
+  }
+}
+```
+
+In this example, `catchError` calls a private `handleError` method when an error occurs during the HTTP request. The `handleError` method logs the error and then returns a new Observable that emits an error using `throwError`, which can then be subscribed to and handled by the component calling the service.
+
+### Handling HTTP errors with interceptors
+
+For centralized handling of HTTP errors across your entire application, you can use an `HttpInterceptor`. This is particularly useful for tasks like:
+
+- Logging all HTTP errors
+- Displaying generic error notifications to the user
+- Handling specific status codes globally (e.g., redirecting on 401 Unauthorized)
+- Adding retry logic
+
+- An interceptor implements the `HttpInterceptor` interface
+- The `intercept` method processes the request and response stream
+- You use the `catchError` operator within the `intercept` method to handle errors from the `handle` call
+
+```typescript
+import { Injectable } from '@angular/core';
+import {
+  HttpEvent,
+  HttpInterceptor,
+  HttpHandler,
+  HttpRequest,
+  HttpErrorResponse,
+} from '@angular/common/http';
+import { Observable, throwError } from 'rxjs';
+import { catchError } from 'rxjs/operators';
+
+@Injectable()
+export class ErrorInterceptor implements HttpInterceptor {
+  intercept(
+    request: HttpRequest<any>,
+    next: HttpHandler
+  ): Observable<HttpEvent<any>> {
+    return next.handle(request).pipe(
+      catchError((error: HttpErrorResponse) => {
+        let errorMessage = '';
+        if (error.error instanceof ErrorEvent) {
+          // Client-side error
+          errorMessage = `Error: ${error.error.message}`;
+        } else {
+          // Server-side error
+          errorMessage = `Error Code: ${error.status}\nMessage: ${error.message}`;
+        }
+        console.error('HTTP Error caught by interceptor:', errorMessage);
+        // You could display a user-friendly message here, e.g., using a notification service
+        // this.notificationService.showError(errorMessage);
+
+        // Re-throw the error to be handled by the specific service/component if needed
+        return throwError(() => new Error(errorMessage));
+      })
+    );
+  }
+}
+```
+
+To use the interceptor, you need to provide it in your application's root module (`app.module.ts`):
+
+```typescript
+import { NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
+
+import { AppComponent } from './app.component';
+import { ErrorInterceptor } from './error.interceptor'; // Import your interceptor
+
+@NgModule({
+  declarations: [AppComponent],
+  imports: [BrowserModule, HttpClientModule],
+  providers: [
+    {
+      provide: HTTP_INTERCEPTORS,
+      useClass: ErrorInterceptor,
+      multi: true, // multi: true is required for HTTP_INTERCEPTORS
+    },
+  ],
+  bootstrap: [AppComponent],
+})
+export class AppModule {}
+```
+
+### Handling global runtime errors with `ErrorHandler`
+
+Angular's `ErrorHandler` is a built-in service that catches unhandled errors that occur anywhere in the application, such as:
+
+- Errors in component lifecycle hooks (`ngOnInit`, `ngOnDestroy`, etc.)
+- Errors during template rendering or event handling (if not caught by other means)
+- Errors in services or other parts of the application that are not within an Observable stream with `catchError`
+
+By default, `ErrorHandler` simply logs the error to the browser console. You can create a custom error handler to implement different behavior, like sending errors to a logging service or displaying a generic error page.
+
+- Create a class that extends `ErrorHandler`
+- Override the `handleError` method
+
+```typescript
+import { ErrorHandler, Injectable } from '@angular/core';
+
+@Injectable()
+export class CustomErrorHandler implements ErrorHandler {
+  handleError(error: any): void {
+    // Log the error to the console (default behavior)
+    console.error('An unhandled error occurred:', error);
+
+    // You can send the error to a logging service here
+    // e.g., this.loggingService.logError(error);
+
+    // Or display a generic error message to the user
+    // e.g., this.notificationService.showFatalError('Something went wrong. Please try again.');
+
+    // Avoid re-throwing the error here, as it might cause infinite loops
+  }
+}
+```
+
+Provide your custom error handler in your root module (`app.module.ts`):
+
+```typescript
+import { NgModule, ErrorHandler } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+
+import { AppComponent } from './app.component';
+import { CustomErrorHandler } from './custom-error-handler'; // Import your custom handler
+
+@NgModule({
+  declarations: [AppComponent],
+  imports: [BrowserModule],
+  providers: [
+    {
+      provide: ErrorHandler,
+      useClass: CustomErrorHandler,
+    },
+  ],
+  bootstrap: [AppComponent],
+})
+export class AppModule {}
+```
+
+### Handling template errors
+
+While `ErrorHandler` catches many template-related runtime errors, you can prevent some common errors in templates by using Angular's features:
+
+- **Safe navigation operator (`?.`)**: Prevents errors when trying to access properties on potentially `null` or `undefined` objects.
+  ```html
+  {{ user?.address?.street }}
+  ```
+- **`*ngIf`**: Conditionally renders parts of the template only when the data is available.
+  ```html
+  <div *ngIf="user">{{ user.name }}</div>
+  ```
+
+### Logging and reporting errors
+
+For production applications, simply logging errors to the console is insufficient. You should integrate with a dedicated error monitoring service (like Sentry, LogRocket, Datadog, etc.) to capture, aggregate, and analyze errors occurring in your users' browsers. Your `ErrorHandler` or `HttpInterceptor` is a good place to send errors to such a service.
+
+### Best practices
+
+- **Provide user feedback**: Inform the user when an error occurs, even if it's a generic message.
+- **Log errors**: Capture detailed error information for debugging and analysis, especially in production.
+- **Centralize handling**: Use interceptors for HTTP errors and `ErrorHandler` for global runtime errors to avoid scattering error handling logic.
+- **Handle specific errors**: Differentiate between different types of errors (e.g., network errors, server errors, validation errors) and handle them appropriately.
+- **Avoid exposing sensitive details**: Do not show raw error messages or stack traces to end-users.
+
+## Further reading
+
+- [Angular Documentation: Handling HTTP Errors](https://angular.dev/guide/http/error-handling)
+- [Angular Documentation: HTTP Interceptors](https://angular.dev/guide/http/interceptors)
+- [Angular Documentation: ErrorHandler](https://angular.dev/api/core/ErrorHandler)
+- [RxJS Documentation: catchError](https://rxjs.dev/api/operators/catchError)

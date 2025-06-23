@@ -1,0 +1,209 @@
+---
+title: Explain data bindings and the different types.
+---
+
+## TL;DR
+
+Data binding in Angular is a mechanism that synchronizes data between the component class and the template (view). It allows you to display component data in the view and react to user input or events from the view.
+
+There are two main categories:
+
+1.  **One-way binding**: Data flows in a single direction, either from the component to the view or from the view to the component.
+    - **Interpolation (`{{ value }}`)**: Displays component property values as text in the template. Data flows from component to view.
+    - **Property binding (`[property]="value"`)**: Sets a DOM element's property to the value of a component property. Data flows from component to view.
+    - **Attribute binding (`[attr.attribute]="value"`)**: Sets an HTML attribute's value. Useful for attributes without corresponding DOM properties (like `colspan`, `aria-*`). Data flows from component to view.
+    - **Event binding (`(event)="handler()"`)**: Listens for events on DOM elements (like `click`, `input`) and executes a component method. Data flows from view to component.
+2.  **Two-way binding (`[(ngModel)]="value"`)**: Data flows in both directions simultaneously. Changes in the component property update the view, and changes in the view (usually via user input) update the component property. This is typically achieved using the `ngModel` directive (requires `FormsModule`).
+
+---
+
+## What is data binding?
+
+Data binding is a core concept in Angular that establishes a connection between the application's data (managed in the component class) and the user interface (represented by the template). It automates the synchronization of data, meaning that when the data in the component changes, the view is automatically updated, and vice versa (depending on the type of binding). This significantly simplifies the process of building interactive applications compared to manually manipulating the DOM.
+
+## One-way data binding
+
+In one-way data binding, the flow of data is unidirectional. Data moves either from the component to the view or from the view to the component, but not both simultaneously through the same binding.
+
+### Interpolation
+
+Interpolation is the simplest form of data binding. It allows you to display the value of a component property directly within the template's HTML as text.
+
+- **Syntax**: `{{ expression }}`
+- **Data flow**: Component to view
+- **Use case**: Displaying text values from the component
+
+```html
+<p>Welcome, {{ userName }}!</p>
+<p>The current count is: {{ counter }}</p>
+```
+
+```typescript
+// In your component class
+userName = 'Alice';
+counter = 0;
+```
+
+### Property binding
+
+Property binding allows you to set a property of a DOM element or a directive to the value of a component property. This is the standard way to set properties like `src`, `href`, `disabled`, `value`, etc.
+
+- **Syntax**: `[domProperty]="componentProperty"`
+- **Data flow**: Component to view
+- **Use case**: Setting element properties dynamically
+
+```html
+<img [src]="imageUrl" [alt]="imageAltText" />
+<button [disabled]="isButtonDisabled">Click Me</button>
+<input type="text" [value]="initialValue" />
+```
+
+```typescript
+// In your component class
+imageUrl = 'assets/logo.png';
+imageAltText = 'Company Logo';
+isButtonDisabled = true;
+initialValue = 'Edit me';
+```
+
+### Attribute binding
+
+Attribute binding is used when there is no corresponding DOM element property for a specific HTML attribute, or when you need to manipulate attributes directly (like `colspan`, `aria-*`, `data-*`). It uses the `attr.` prefix.
+
+- **Syntax**: `[attr.htmlAttribute]="componentProperty"`
+- **Data flow**: Component to view
+- **Use case**: Setting HTML attributes that don't map directly to DOM properties
+
+```html
+<table>
+  <tr>
+    <td [attr.colspan]="colSpanValue">Spans multiple columns</td>
+  </tr>
+</table>
+<div [attr.aria-label]="ariaLabelText">Accessible element</div>
+```
+
+```typescript
+// In your component class
+colSpanValue = 2;
+ariaLabelText = 'Information section';
+```
+
+### Class binding
+
+Class binding allows you to add or remove CSS classes on an element based on the truthiness of a component property or expression.
+
+- **Syntax**: `[class.className]="condition"`
+- **Data flow**: Component to view
+- **Use case**: Dynamically applying CSS classes
+
+```html
+<div [class.active]="isActive">This div is active when isActive is true</div>
+<button [class.error]="hasError" [class.warning]="isWarning">
+  Status Button
+</button>
+```
+
+```typescript
+// In your component class
+isActive = true;
+hasError = false;
+isWarning = true;
+```
+
+You can also bind to the entire `class` attribute using property binding with an object or string:
+
+- `[class]="'my-class other-class'"`
+- `[class]="{'active': isActive, 'error': hasError}"`
+
+### Style binding
+
+Style binding allows you to set inline CSS styles on an element based on the value of a component property or expression. You can also include units like `px`, `%`, `em`.
+
+- **Syntax**: `[style.styleProperty]="value"` or `[style.styleProperty.unit]="value"`
+- **Data flow**: Component to view
+- **Use case**: Dynamically applying inline styles
+
+```html
+<div [style.color]="textColor">This text color changes</div>
+<div [style.font-size.px]="fontSizePx">This font size changes</div>
+```
+
+```typescript
+// In your component class
+textColor = 'blue';
+fontSizePx = 16;
+```
+
+Similar to class binding, you can bind to the entire `style` attribute using property binding with an object or string:
+
+- `[style]="'color: red; font-weight: bold;'"`
+- `[style]="{'color': textColor, 'font-size.px': fontSizePx}"`
+
+### Event binding
+
+Event binding allows you to listen for specific events on DOM elements (like `click`, `input`, `submit`, `mouseover`) and execute a method in your component class when that event occurs.
+
+- **Syntax**: `(domEvent)="componentMethod($event)"`
+- **Data flow**: View to component
+- **Use case**: Responding to user interactions
+
+```html
+<button (click)="incrementCounter()">Increment</button>
+<input type="text" (input)="updateValue($event.target.value)" />
+```
+
+```typescript
+// In your component class
+counter = 0;
+currentValue = '';
+
+incrementCounter() {
+  this.counter++;
+}
+
+updateValue(value: string) {
+  this.currentValue = value;
+}
+```
+
+The `$event` object contains information about the DOM event. Its type depends on the specific event.
+
+## Two-way data binding
+
+Two-way data binding provides a way for data to flow in both directions simultaneously: from the component to the view and from the view back to the component. When the data in the component changes, the view updates, and when the data in the view changes (typically through user input), the component's data is updated accordingly.
+
+Angular achieves two-way binding using the `[(...)]` syntax, often referred to as "banana in a box". This syntax is syntactic sugar for combining property binding and event binding. The most common use case is with the `ngModel` directive, which is part of the `FormsModule`.
+
+- **Syntax**: `[(propertyName)]="componentProperty"` (specifically `[(ngModel)]="componentProperty"`)
+- **Data flow**: Component to view and view to component
+- **Use case**: Creating interactive forms where user input updates component data immediately
+
+```html
+<input type="text" [(ngModel)]="userName" />
+<p>Hello, {{ userName }}!</p>
+```
+
+```typescript
+// In your component class
+userName = 'Guest';
+```
+
+To use `ngModel`, you must import the `FormsModule` into your Angular module (e.g., `AppModule`).
+
+The `[(ngModel)]="userName"` syntax is equivalent to:
+
+```html
+<input type="text" [ngModel]="userName" (ngModelChange)="userName = $event" />
+```
+
+Here, `[ngModel]` is property binding (component to view), and `(ngModelChange)` is event binding (view to component), where the `ngModel` directive emits the new value via the `ngModelChange` event.
+
+## Further reading
+
+- [Angular Documentation: Data binding](https://angular.dev/guide/concept/data-binding)
+- [Angular Documentation: Property binding](https://angular.dev/guide/templates/property-binding)
+- [Angular Documentation: Attribute binding](https://angular.dev/guide/templates/attribute-binding)
+- [Angular Documentation: Class and style binding](https://angular.dev/guide/templates/class-and-style-binding)
+- [Angular Documentation: Event binding](https://angular.dev/guide/templates/event-binding)
+- [Angular Documentation: Two-way binding](https://angular.dev/guide/templates/two-way-binding)

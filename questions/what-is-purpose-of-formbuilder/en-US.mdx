@@ -1,0 +1,175 @@
+---
+title: What is the purpose of FormBuilder?
+---
+
+## TL;DR
+
+`FormBuilder` is a service provided by Angular's `@angular/forms` module that simplifies the creation of `FormControl`, `FormGroup`, and `FormArray` instances in reactive forms. Instead of manually instantiating each control and group with `new FormControl(...)` and `new FormGroup({...})`, you inject `FormBuilder` and use its methods like `group()`, `control()`, and `array()`. This leads to cleaner, more readable code, especially for complex forms.
+
+For example, creating a simple form group:
+
+```typescript
+// Without FormBuilder
+const myForm = new FormGroup({
+  name: new FormControl(''),
+  email: new FormControl('')
+});
+
+// With FormBuilder
+import { FormBuilder, FormGroup } from '@angular/forms';
+
+// In your component/service constructor
+constructor(private fb: FormBuilder) {}
+
+// To create the form
+const myForm = this.fb.group({
+  name: [''], // Shorthand for new FormControl('')
+  email: ['']
+});
+```
+
+---
+
+## What is FormBuilder?
+
+`FormBuilder` is a helper service provided by Angular's `@angular/forms` module. It's designed to make working with reactive forms easier by providing a more concise syntax for creating form controls, form groups, and form arrays.
+
+## Purpose of FormBuilder
+
+The primary purpose of `FormBuilder` is to simplify the process of defining the structure of a reactive form programmatically. Instead of manually instantiating each `FormControl`, `FormGroup`, or `FormArray` using their respective constructors, you use the methods provided by the `FormBuilder` service. This is particularly beneficial for forms with many controls or nested groups/arrays, as it significantly reduces boilerplate code and improves readability.
+
+## How it simplifies form creation
+
+`FormBuilder` offers methods like `group()`, `control()`, and `array()` that serve as factory methods for creating form instances.
+
+### Creating a FormGroup
+
+Without `FormBuilder`, you would create a `FormGroup` like this:
+
+```typescript
+import { FormGroup, FormControl, Validators } from '@angular/forms';
+
+const userForm = new FormGroup({
+  firstName: new FormControl('', Validators.required),
+  lastName: new FormControl(''),
+  address: new FormGroup({
+    street: new FormControl(''),
+    city: new FormControl(''),
+  }),
+});
+```
+
+With `FormBuilder`, you inject the service and use its `group()` method:
+
+```typescript
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+
+// In your component/service constructor
+constructor(private fb: FormBuilder) {}
+
+// To create the form
+const userForm = this.fb.group({
+  firstName: ['', Validators.required], // Shorthand: [initialValue, validators]
+  lastName: [''],
+  address: this.fb.group({ // Nested group
+    street: [''],
+    city: ['']
+  })
+});
+```
+
+The `group()` method accepts an object where keys are control names and values are either:
+
+- A `FormControl` instance.
+- An array in the format `[initialValue, validators, asyncValidators]`. The validators and async validators are optional.
+
+### Creating a FormControl
+
+While you can use `fb.control()`, the array shorthand within `fb.group()` is more common for controls that are part of a group.
+
+```typescript
+// Using fb.control() directly
+const nameControl = this.fb.control('Initial Value', Validators.minLength(3));
+
+// More commonly used within fb.group()
+const userForm = this.fb.group({
+  name: ['Initial Value', Validators.minLength(3)],
+});
+```
+
+### Creating a FormArray
+
+Without `FormBuilder`:
+
+```typescript
+import { FormGroup, FormControl, FormArray } from '@angular/forms';
+
+const skillsArray = new FormArray([
+  new FormControl('Angular'),
+  new FormControl('React'),
+]);
+```
+
+With `FormBuilder`:
+
+```typescript
+import { FormBuilder, FormArray } from '@angular/forms';
+
+// In your component/service constructor
+constructor(private fb: FormBuilder) {}
+
+// To create the form array
+const skillsArray = this.fb.array([
+  'Angular', // Shorthand for new FormControl('Angular')
+  'React'
+]);
+
+// Or with controls having validators
+const skillsArrayWithValidators = this.fb.array([
+  ['Angular', Validators.required],
+  ['React']
+]);
+```
+
+The `array()` method accepts an array of control configurations, which can be initial values (shorthand for `FormControl`) or arrays in the `[initialValue, validators, asyncValidators]` format.
+
+## Usage in reactive forms
+
+To use `FormBuilder`, you typically inject it into the constructor of your component or service where you are defining the reactive form structure. You then call its methods within a lifecycle hook like `ngOnInit` or directly in the constructor to initialize your `FormGroup` or `FormArray`.
+
+```typescript
+import { Component, OnInit } from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+
+@Component({
+  selector: 'app-user-profile',
+  template: `
+    <form [formGroup]="profileForm" (ngSubmit)="onSubmit()">
+      <input formControlName="firstName" placeholder="First Name" />
+      <input formControlName="lastName" placeholder="Last Name" />
+      <button type="submit">Save</button>
+    </form>
+  `,
+})
+export class UserProfileComponent implements OnInit {
+  profileForm!: FormGroup;
+
+  constructor(private fb: FormBuilder) {}
+
+  ngOnInit(): void {
+    this.profileForm = this.fb.group({
+      firstName: ['', Validators.required],
+      lastName: [''],
+    });
+  }
+
+  onSubmit(): void {
+    console.log(this.profileForm.value);
+  }
+}
+```
+
+## Further reading
+
+- [Angular Guide: Reactive Forms](https://angular.dev/guide/forms/reactive-forms)
+- [Angular API: FormBuilder](https://angular.dev/api/forms/FormBuilder)

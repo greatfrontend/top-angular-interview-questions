@@ -1,0 +1,118 @@
+---
+title: What are the different component’s lifecycle hooks?
+---
+
+## TL;DR
+
+Angular components have a lifecycle managed by Angular itself. As the component is created, updated, and destroyed, Angular calls specific methods on the component class at predefined moments. These methods are called lifecycle hooks.
+
+The most common hooks, in their typical execution order, are:
+
+- `ngOnChanges`: Called when input properties change
+- `ngOnInit`: Called once after the component is initialized and its inputs are set
+- `ngDoCheck`: Called during every change detection run
+- `ngAfterContentInit`: Called after content projected into the component's view is initialized
+- `ngAfterContentChecked`: Called after the projected content has been checked
+- `ngAfterViewInit`: Called after the component's view and its child views are initialized
+- `ngAfterViewChecked`: Called after the component's view and its child views have been checked
+- `ngOnDestroy`: Called just before the component is destroyed
+
+You implement a hook by declaring a method with the corresponding name on your component class and optionally implementing the associated interface (e.g., `OnInit`).
+
+---
+
+## Understanding component lifecycle hooks
+
+Angular components have a lifecycle that starts when Angular instantiates the component class and renders the component view, and ends when Angular destroys the component instance and removes its rendered template from the DOM. Angular provides lifecycle hook methods that you can tap into to perform actions at specific moments in this lifecycle.
+
+You implement a lifecycle hook by declaring a method with the hook's name on your component class. For better type safety and clarity, you can also implement the corresponding interface from `@angular/core`.
+
+Here's a simple example of implementing the `ngOnInit` hook:
+
+```typescript
+import { Component, OnInit } from '@angular/core';
+
+@Component({
+  selector: 'app-my-component',
+  template: '<p>My Component</p>',
+})
+export class MyComponent implements OnInit {
+  constructor() {
+    console.log('Constructor called');
+  }
+
+  ngOnInit(): void {
+    // Initialization logic here
+    console.log('ngOnInit called');
+  }
+}
+```
+
+## Common lifecycle hooks
+
+Here are the most commonly used lifecycle hooks in Angular components, listed in their typical execution order:
+
+### `ngOnChanges`
+
+- Called before `ngOnInit` and whenever one or more data-bound input properties change.
+- Receives a `SimpleChanges` object containing the current and previous property values.
+- This hook is useful for reacting to changes in input properties, especially when you need to perform actions based on the _previous_ value or when multiple inputs change simultaneously.
+
+### `ngOnInit`
+
+- Called once after the component is initialized and its input properties have been set for the first time.
+- This is the standard place to put initialization logic that depends on the component's inputs or needs to be performed only once after construction.
+- It's generally preferred over the constructor for complex initialization because inputs are guaranteed to be available here.
+
+### `ngDoCheck`
+
+- Called during every change detection run, immediately after `ngOnChanges` (if it ran) and `ngOnInit` (if it ran).
+- This hook allows you to implement your own custom change detection logic or perform actions when Angular's default change detection might not catch a change (e.g., changes within an object or array referenced by an input property).
+- Use this hook cautiously as it can impact performance if the logic inside is complex, as it runs very frequently.
+
+### `ngAfterContentInit`
+
+- Called once after Angular has projected external content into the component's view.
+- This hook is relevant for components that use `<ng-content>` to project content from their parent component.
+- It's called after the projected content has been initialized.
+
+### `ngAfterContentChecked`
+
+- Called after Angular has checked the content projected into the component.
+- Called after `ngAfterContentInit` and after every subsequent `ngDoCheck`.
+- Use this hook to perform actions after the projected content has been checked for changes.
+
+### `ngAfterViewInit`
+
+- Called once after Angular has initialized the component's view and its child views.
+- This hook is useful for performing actions that require access to the component's DOM elements or its child components, typically accessed via `@ViewChild` or `@ViewChildren`.
+
+### `ngAfterViewChecked`
+
+- Called after Angular has checked the component's view and its child views.
+- Called after `ngAfterViewInit` and after every subsequent `ngAfterContentChecked`.
+- Use this hook to perform actions after the view and its children have been checked for changes.
+
+### `ngOnDestroy`
+
+- Called just before Angular destroys the component.
+- This is the place to perform cleanup tasks, such as unsubscribing from observables, detaching event handlers, or clearing intervals/timeouts, to prevent memory leaks.
+
+## Execution order
+
+The typical sequence of lifecycle hooks for a component is:
+
+1.  `ngOnChanges` (if inputs are present and change)
+2.  `ngOnInit`
+3.  `ngDoCheck`
+4.  `ngAfterContentInit` (if content projection is used)
+5.  `ngAfterContentChecked` (if content projection is used)
+6.  `ngAfterViewInit`
+7.  `ngAfterViewChecked`
+8.  `ngOnDestroy` (when the component is removed)
+
+Note that `ngOnChanges`, `ngDoCheck`, `ngAfterContentChecked`, and `ngAfterViewChecked` can be called multiple times during the component's lifetime as change detection runs.
+
+## Further reading
+
+- [Angular Documentation: Lifecycle Hooks](https://angular.dev/guide/components/lifecycle)

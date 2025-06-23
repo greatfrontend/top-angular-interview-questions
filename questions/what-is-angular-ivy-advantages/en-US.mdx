@@ -1,0 +1,62 @@
+---
+title: What is Angular Ivy and what advantages does it provide for compilation and rendering?
+---
+
+## TL;DR
+
+Angular Ivy is the default compilation and rendering pipeline for Angular applications, introduced as the default in Angular 9. It's a complete rewrite designed to improve build times, reduce bundle sizes, and enhance runtime performance.
+
+Key advantages include:
+
+- **Locality:** Ivy compiles components independently, leading to significantly faster build times, especially during development.
+- **Tree-shaking:** The generated code is highly tree-shakable, meaning unused parts of the Angular framework can be removed from the final bundle, resulting in smaller application sizes.
+- **Smaller bundles:** Due to better tree-shaking and a more efficient runtime, applications built with Ivy are generally smaller.
+- **Faster rendering:** A smaller runtime and more efficient generated code can lead to faster initial loading and rendering of the application.
+- **Improved debugging:** Provides better stack traces and debugging capabilities.
+
+---
+
+## What is Angular Ivy?
+
+Angular Ivy is the code name for the default compilation and rendering pipeline used by Angular. It represents a significant rewrite of the Angular compiler and runtime, designed with the goals of improving performance, reducing bundle sizes, and enhancing the developer experience. Ivy became the default engine starting with Angular version 9.
+
+## Advantages for compilation
+
+Ivy brings several key advantages to the compilation process:
+
+### Faster build times
+
+Ivy's compiler is designed with "locality" in mind. This means it compiles each component and module independently, without needing global information about the entire application. This approach allows for faster incremental builds, especially during development, as changes to one component only require recompiling that specific component and its dependencies, rather than the whole application.
+
+### Improved tree-shaking
+
+The output of the Ivy compiler is highly optimized for tree-shaking. It generates code that is more modular and easier for modern JavaScript bundlers (like Webpack) to analyze and remove unused code. This is crucial for reducing the final application bundle size.
+
+### Smaller compiler output
+
+The compiler itself is designed to be smaller and simpler, contributing to faster compilation setup and execution.
+
+## Advantages for rendering
+
+Ivy also provides significant benefits for the rendering process and the application's runtime performance:
+
+### Smaller application bundles
+
+Because the generated code is more tree-shakable, the Angular runtime code included in the final bundle is significantly reduced. Only the parts of Angular that your application actually uses are included. This leads to smaller application sizes, which means faster download times for users.
+
+### Faster runtime performance
+
+A smaller runtime footprint and more efficient generated code can contribute to faster application startup times and potentially smoother rendering performance, especially on devices with limited resources.
+
+### Improved debugging
+
+Ivy provides better debugging capabilities. For instance, stack traces are often easier to read and understand, pointing directly to the component code rather than internal framework code.
+
+### Enabling future features
+
+The architecture of Ivy is designed to be more flexible and extensible, paving the way for future improvements and features in the Angular framework, such as the Signals reactivity model (available from Angular 16 onwards).
+
+## Further reading
+
+- [Angular documentation on Ivy](https://angular.dev/guide/ivy)
+- [Angular blog post announcing Ivy as the default](https://blog.angular.io/version-9-of-angular-now-available-especially-ivy-b2fd7d9f1428)

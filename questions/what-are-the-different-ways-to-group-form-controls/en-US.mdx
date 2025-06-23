@@ -1,0 +1,185 @@
+---
+title: What are the different ways to group form controls?
+---
+
+## TL;DR
+
+In Angular reactive forms, you group form controls primarily using two classes: `FormGroup` and `FormArray`.
+
+- `FormGroup`: Used to group a collection of `FormControl`, `FormGroup`, or `FormArray` instances into a single object, where each child control is identified by a unique key (like properties in an object). It's suitable for fixed structures like a user's name and email.
+- `FormArray`: Used to group a collection of `FormControl`, `FormGroup`, or `FormArray` instances into an array. It's suitable for dynamic lists of controls, like a list of phone numbers or addresses, where the number of items can change.
+
+You typically create these using the `FormBuilder` service for convenience:
+
+```typescript
+import { FormBuilder, FormGroup, FormArray, Validators } from '@angular/forms';
+
+constructor(private fb: FormBuilder) {}
+
+myForm = this.fb.group({
+  name: ['', Validators.required], // FormControl
+  address: this.fb.group({ // FormGroup nested
+    street: [''],
+    city: ['']
+  }),
+  phoneNumbers: this.fb.array([ // FormArray
+    this.fb.control('') // Initial FormControl in the array
+  ])
+});
+```
+
+In the template, you bind to these groups using `[formGroup]` and `[formArrayName]` directives.
+
+---
+
+## Grouping form controls
+
+In Angular's reactive forms, you group individual `FormControl` instances together to manage their state, validation, and values as a single unit. The two primary ways to group controls are using `FormGroup` and `FormArray`.
+
+### Using `FormGroup`
+
+A `FormGroup` aggregates a collection of `FormControl`, `FormGroup`, or `FormArray` instances into an object, where each child control is associated with a specific key. This is the most common way to structure forms that represent a fixed set of related data, like a user profile with fields for name, email, and address.
+
+- **Purpose**: To manage a fixed set of controls as a single unit, representing an object structure.
+- **Creation**: You typically create a `FormGroup` by instantiating the `FormGroup` class or, more commonly, by using the `group` method of the `FormBuilder` service.
+- **Structure**: It takes an object where keys are the names of the controls and values are the corresponding `FormControl`, `FormGroup`, or `FormArray` instances.
+
+**Example using `FormBuilder`:**
+
+```typescript
+import { Component } from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+
+@Component({
+  selector: 'app-user-form',
+  template: `
+    <form [formGroup]="userForm">
+      <div>
+        <label for="name">Name:</label>
+        <input id="name" type="text" formControlName="name" />
+      </div>
+      <div>
+        <label for="email">Email:</label>
+        <input id="email" type="email" formControlName="email" />
+      </div>
+      <div formGroupName="address">
+        <!-- Nested FormGroup -->
+        <h3>Address</h3>
+        <div>
+          <label for="street">Street:</label>
+          <input id="street" type="text" formControlName="street" />
+        </div>
+        <div>
+          <label for="city">City:</label>
+          <input id="city" type="text" formControlName="city" />
+        </div>
+      </div>
+      <button type="submit" [disabled]="!userForm.valid">Submit</button>
+    </form>
+
+    <p>Form Value: {{ userForm.value | json }}</p>
+  `,
+})
+export class UserFormComponent {
+  userForm: FormGroup;
+
+  constructor(private fb: FormBuilder) {
+    this.userForm = this.fb.group({
+      name: ['', Validators.required],
+      email: ['', [Validators.required, Validators.email]],
+      address: this.fb.group({
+        // Nested FormGroup
+        street: [''],
+        city: [''],
+      }),
+    });
+  }
+}
+```
+
+In the template, the `[formGroup]` directive binds the form element to the `userForm` `FormGroup`. Inside the form, `formControlName` directives link individual input elements to controls within the `FormGroup`. For nested `FormGroup` instances, you use the `formGroupName` directive.
+
+### Using `FormArray`
+
+A `FormArray` aggregates a collection of `FormControl`, `FormGroup`, or `FormArray` instances into an array. This is ideal for scenarios where you need a dynamic list of controls, such as a list of phone numbers, skills, or items in an order, where the number of items can change at runtime.
+
+- **Purpose**: To manage a dynamic list of controls as a single unit, representing an array structure.
+- **Creation**: You typically create a `FormArray` by instantiating the `FormArray` class or, more commonly, by using the `array` method of the `FormBuilder` service.
+- **Structure**: It takes an array of `FormControl`, `FormGroup`, or `FormArray` instances.
+
+**Example using `FormBuilder`:**
+
+```typescript
+import { Component } from '@angular/core';
+import { FormBuilder, FormGroup, FormArray, Validators } from '@angular/forms';
+
+@Component({
+  selector: 'app-phone-list-form',
+  template: `
+    <form [formGroup]="phoneListForm">
+      <h3>Phone Numbers</h3>
+      <div formArrayName="phoneNumbers">
+        <!-- Bind to FormArray -->
+        <div
+          *ngFor="let phoneControl of phoneNumbers.controls; let i = index"
+          [formGroupName]="i">
+          <!-- Iterate and bind to nested FormGroup -->
+          <label for="phone-{{ i }}">Phone {{ i + 1 }}:</label>
+          <input id="phone-{{ i }}" type="text" formControlName="number" />
+          <!-- Control within nested FormGroup -->
+          <button type="button" (click)="removePhoneNumber(i)">Remove</button>
+        </div>
+      </div>
+      <button type="button" (click)="addPhoneNumber()">Add Phone</button>
+      <button type="submit" [disabled]="!phoneListForm.valid">Submit</button>
+    </form>
+
+    <p>Form Value: {{ phoneListForm.value | json }}</p>
+  `,
+})
+export class PhoneListFormComponent {
+  phoneListForm: FormGroup;
+
+  constructor(private fb: FormBuilder) {
+    this.phoneListForm = this.fb.group({
+      phoneNumbers: this.fb.array([
+        // FormArray of FormGroups
+        this.createPhoneNumberGroup(), // Initial item
+      ]),
+    });
+  }
+
+  // Helper to create a FormGroup for a single phone number
+  createPhoneNumberGroup(): FormGroup {
+    return this.fb.group({
+      number: ['', Validators.required],
+    });
+  }
+
+  // Getter to easily access the FormArray
+  get phoneNumbers(): FormArray {
+    return this.phoneListForm.get('phoneNumbers') as FormArray;
+  }
+
+  addPhoneNumber(): void {
+    this.phoneNumbers.push(this.createPhoneNumberGroup());
+  }
+
+  removePhoneNumber(index: number): void {
+    this.phoneNumbers.removeAt(index);
+  }
+}
+```
+
+In the template, the `[formGroup]` directive binds the form. The `formArrayName` directive binds a container element (like a `div`) to the `phoneNumbers` `FormArray`. You then use `*ngFor` to iterate over the `controls` property of the `FormArray`. For each control in the array (which is a `FormGroup` in this example), you use the `[formGroupName]="i"` directive to bind the inner elements to that specific `FormGroup` instance within the array. `formControlName` then binds the input to the control within that nested `FormGroup`.
+
+### Nesting `FormGroup` and `FormArray`
+
+`FormGroup` and `FormArray` can be nested within each other to represent complex data structures. A `FormGroup` can contain `FormArray` instances, and a `FormArray` can contain `FormGroup` instances (as shown in the examples above) or even other `FormArray` instances. This allows you to build reactive forms that accurately mirror the structure of your application's data model.
+
+## Further reading
+
+- [Angular Guide: Reactive Forms](https://angular.dev/guide/forms/reactive-forms)
+- [Angular API: FormGroup](https://angular.dev/api/forms/FormGroup)
+- [Angular API: FormArray](https://angular.dev/api/forms/FormArray)
+- [Angular API: FormBuilder](https://angular.dev/api/forms/FormBuilder)

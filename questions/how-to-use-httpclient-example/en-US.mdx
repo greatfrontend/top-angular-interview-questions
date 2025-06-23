@@ -1,0 +1,249 @@
+---
+title: Explain how to use `HttpClient` with an example?
+---
+
+## TL;DR
+
+`HttpClient` is Angular's built-in service for making HTTP requests to fetch data from or send data to a backend server. You use it by importing `HttpClientModule` into your application's root or feature module and then injecting the `HttpClient` service into your components or services.
+
+Here's a quick example of making a GET request:
+
+```typescript
+import { HttpClient } from '@angular/common/http';
+import { Injectable } from '@angular/core';
+
+@Injectable({
+  providedIn: 'root',
+})
+export class DataService {
+  private apiUrl = 'https://api.example.com/items'; // Replace with your API endpoint
+
+  constructor(private http: HttpClient) {}
+
+  getItems() {
+    return this.http.get<any[]>(this.apiUrl); // Returns an Observable
+  }
+}
+```
+
+In a component, you would inject the `DataService` and subscribe to the observable returned by `getItems()` to get the data:
+
+```typescript
+import { Component, OnInit } from '@angular/core';
+import { DataService } from './data.service';
+
+@Component({
+  selector: 'app-item-list',
+  template: `
+    <ul>
+      <li *ngFor="let item of items">{{ item.name }}</li>
+    </ul>
+  `,
+})
+export class ItemListComponent implements OnInit {
+  items: any[] = [];
+
+  constructor(private dataService: DataService) {}
+
+  ngOnInit() {
+    this.dataService.getItems().subscribe(data => {
+      this.items = data;
+    });
+  }
+}
+```
+
+`HttpClient` methods return Observables, which you must subscribe to in order to initiate the request and receive the response. It also provides features for error handling, request and response interception, and more.
+
+---
+
+## What is HttpClient?
+
+`HttpClient` is a service provided by Angular's `@angular/common/http` module. It is the standard way to perform HTTP requests in Angular applications. It offers a simplified API for common HTTP client tasks and includes features like typed request and response objects, interceptors, and streamlined error handling.
+
+## Setting up HttpClient
+
+To use `HttpClient`, you need to import `HttpClientModule` from `@angular/common/http` into your Angular module. Typically, you import it into your root `AppModule`, but you can also import it into feature modules if only specific parts of your application need to make HTTP requests.
+
+```typescript
+// app.module.ts
+import { NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+import { HttpClientModule } from '@angular/common/http'; // Import HttpClientModule
+
+import { AppComponent } from './app.component';
+import { ItemListComponent } from './item-list/item-list.component';
+
+@NgModule({
+  declarations: [AppComponent, ItemListComponent],
+  imports: [
+    BrowserModule,
+    HttpClientModule, // Add HttpClientModule to imports
+  ],
+  providers: [],
+  bootstrap: [AppComponent],
+})
+export class AppModule {}
+```
+
+## Injecting HttpClient
+
+Once `HttpClientModule` is imported, you can inject the `HttpClient` service into any component, service, or other injectable class using dependency injection. It's common practice to inject it into a service dedicated to handling API calls, keeping your components focused on presentation logic.
+
+```typescript
+import { HttpClient } from '@angular/common/http';
+import { Injectable } from '@angular/core';
+
+@Injectable({
+  providedIn: 'root', // Makes the service available throughout the app
+})
+export class ApiService {
+  constructor(private http: HttpClient) {}
+
+  // ... methods to make requests
+}
+```
+
+## Making HTTP requests
+
+`HttpClient` provides methods for all standard HTTP verbs: `get`, `post`, `put`, `delete`, `patch`, `head`, and `jsonp`. Each method returns an `Observable` that emits the response from the server.
+
+### Example: Making a GET request
+
+Let's expand on the previous example to fetch a list of items from an API.
+
+First, create a service to handle the API call:
+
+```typescript
+// src/app/data.service.ts
+import { Injectable } from '@angular/core';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Observable, throwError } from 'rxjs';
+import { catchError, retry } from 'rxjs/operators';
+
+// Define an interface for the data structure (optional but recommended)
+export interface Item {
+  id: number;
+  name: string;
+  description: string;
+}
+
+@Injectable({
+  providedIn: 'root',
+})
+export class DataService {
+  private apiUrl = 'https://jsonplaceholder.typicode.com/posts'; // Example API endpoint
+
+  constructor(private http: HttpClient) {}
+
+  getItems(): Observable<Item[]> {
+    // Use the get method, specifying the expected response type <Item[]>
+    return this.http.get<Item[]>(this.apiUrl).pipe(
+      retry(2), // Retry a failed request up to 2 times
+      catchError(this.handleError) // Handle errors
+    );
+  }
+
+  // Basic error handling function
+  private handleError(error: HttpErrorResponse) {
+    if (error.status === 0) {
+      // A client-side or network error occurred. Handle it accordingly.
+      console.error('An error occurred:', error.error);
+    } else {
+      // The backend returned an unsuccessful response code.
+      // The response body may contain clues as to what went wrong.
+      console.error(
+        `Backend returned code ${error.status}, body was: `,
+        error.error
+      );
+    }
+    // Return an observable with a user-facing error message.
+    return throwError(
+      () => new Error('Something bad happened; please try again later.')
+    );
+  }
+}
+```
+
+Next, use this service in a component:
+
+```typescript
+// src/app/item-list/item-list.component.ts
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { DataService, Item } from '../data.service';
+import { Subscription } from 'rxjs';
+
+@Component({
+  selector: 'app-item-list',
+  template: `
+    <h2>Items</h2>
+    <p *ngIf="errorMessage" style="color: red;">{{ errorMessage }}</p>
+    <ul *ngIf="items.length > 0">
+      <li *ngFor="let item of items">
+        <strong>{{ item.title }}</strong
+        >: {{ item.body }}
+      </li>
+    </ul>
+    <p *ngIf="!items.length && !errorMessage">Loading items...</p>
+  `,
+})
+export class ItemListComponent implements OnInit, OnDestroy {
+  items: Item[] = [];
+  errorMessage: string | null = null;
+  private itemsSubscription: Subscription | undefined;
+
+  constructor(private dataService: DataService) {}
+
+  ngOnInit() {
+    // Subscribe to the Observable returned by the service method
+    this.itemsSubscription = this.dataService.getItems().subscribe({
+      next: data => {
+        this.items = data; // Assign the received data
+        this.errorMessage = null; // Clear any previous error
+      },
+      error: error => {
+        console.error('Error fetching items:', error);
+        this.errorMessage = 'Failed to load items. Please try again.';
+        this.items = []; // Clear items on error
+      },
+      complete: () => {
+        console.log('Item fetching complete');
+      },
+    });
+  }
+
+  ngOnDestroy() {
+    // Unsubscribe to prevent memory leaks
+    if (this.itemsSubscription) {
+      this.itemsSubscription.unsubscribe();
+    }
+  }
+}
+```
+
+### Handling the response
+
+As shown in the example, `HttpClient` methods return Observables. To get the data or handle errors, you must `subscribe` to the observable. The `subscribe` method can take up to three callback functions:
+
+- `next`: Called when the observable emits a value (the response data).
+- `error`: Called if an error occurs during the request.
+- `complete`: Called when the observable completes (the request finishes successfully).
+
+It's good practice to handle errors using the `catchError` operator from RxJS within the service and unsubscribe from the observable in the `ngOnDestroy` lifecycle hook of the component to prevent memory leaks, especially for long-lived subscriptions.
+
+### Other HTTP methods
+
+`HttpClient` provides similar methods for other request types:
+
+- `post(url, body, options)`: Sends data to the server.
+- `put(url, body, options)`: Updates data on the server.
+- `delete(url, options)`: Deletes data on the server.
+- `patch(url, body, options)`: Applies partial updates to data.
+
+All these methods also return Observables and can accept an optional `options` object to configure headers, parameters, response type, etc.
+
+## Further reading
+
+- [Angular Documentation: Communicating with backend services using HTTP](https://angular.dev/guide/http)
+- [HttpClient API Reference](https://angular.dev/api/common/http/HttpClient)
+- [HttpClientModule API Reference](https://angular.dev/api/common/http/HttpClientModule)

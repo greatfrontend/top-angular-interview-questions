@@ -1,0 +1,132 @@
+---
+title: What is a service in Angular and how do you create one?
+---
+
+## TL;DR
+
+An Angular service is a class used to encapsulate logic, data fetching, or shared functionality that isn't directly tied to the user interface. They promote separation of concerns, making your code more modular, reusable, and testable.
+
+You typically create a service using the Angular CLI:
+
+```bash
+ng generate service data
+```
+
+This command creates a class decorated with `@Injectable()`. The `@Injectable()` decorator marks the class as a potential target for dependency injection and, when used with `providedIn: 'root'`, makes the service a singleton available throughout your application. You then inject the service into components or other services that need to use its functionality via their constructors.
+
+---
+
+## What is an Angular service?
+
+An Angular service is a class that contains reusable logic, data, or functionality that is not directly associated with a user interface element (like a component). Services are a fundamental concept in Angular's architecture, primarily used for:
+
+### Encapsulating business logic
+
+Services are ideal for holding code related to data manipulation, calculations, or complex operations that might be needed in multiple parts of your application.
+
+### Data fetching and management
+
+Commonly, services are used to interact with backend APIs, fetch data, and potentially manage the state of that data before providing it to components.
+
+### Sharing data or state
+
+Because services are often provided as singletons within a specific injector scope (like the application root), they can be used to share data or state between different components that inject the same service instance.
+
+### Promoting separation of concerns
+
+By moving business logic and data handling out of components and into services, components can focus solely on presenting data and handling user interactions, leading to cleaner and more maintainable code.
+
+## Key characteristics of an Angular service
+
+### It's a class
+
+Like components, services are defined as standard TypeScript classes.
+
+### Uses the `@Injectable()` decorator
+
+The `@Injectable()` decorator, imported from `@angular/core`, is crucial. It marks the class as a service that can be injected into other classes (like components, directives, pipes, or other services) using Angular's dependency injection system. It also allows the service itself to have dependencies injected into its constructor.
+
+### Often configured with `providedIn`
+
+Available from Angular 6 onwards, the `providedIn` property within the `@Injectable()` decorator is the recommended way to register a service with the dependency injection system.
+
+- `providedIn: 'root'` makes the service a singleton instance available throughout the entire application. This is the most common configuration and enables tree-shaking, meaning the service code is only included in the final bundle if it's actually injected and used somewhere.
+- `providedIn: SomeModule` makes the service available only within the injector scope of `SomeModule`.
+- You can also provide services at the component level using the `providers` array in the `@Component()` decorator, which creates a new instance of the service for each instance of that component.
+
+## How to create an Angular service
+
+The easiest and recommended way to create a service is by using the Angular CLI.
+
+### Using the Angular CLI
+
+Open your terminal in your Angular project directory and run the following command:
+
+```bash
+ng generate service <service-name>
+```
+
+Replace `<service-name>` with the desired name for your service (e.g., `data`, `user-profile`, `auth`). The CLI will typically create two files:
+
+- `<service-name>.service.ts`: The service class file.
+- `<service-name>.service.spec.ts`: A file for writing unit tests for the service.
+
+For example, running `ng generate service data` will create `data.service.ts` with the following basic structure:
+
+```typescript
+import { Injectable } from '@angular/core';
+
+@Injectable({
+  providedIn: 'root', // Makes the service a singleton available everywhere
+})
+export class DataService {
+  constructor() {
+    console.log('DataService instance created');
+  }
+
+  // Add methods for data fetching, logic, etc.
+  getAppData(): string {
+    return 'Some application data';
+  }
+}
+```
+
+The `providedIn: 'root'` configuration means you don't need to explicitly add this service to the `providers` array of any module or component to make it available application-wide.
+
+### Manually creating a service
+
+While not recommended for typical workflows, you could manually create the `.service.ts` file and add the `@Injectable()` decorator and class definition yourself. However, the CLI command handles file creation, naming conventions, and test file generation automatically.
+
+## Using a service
+
+Once a service is created and provided (e.g., via `providedIn: 'root'`), you can inject it into the constructor of any class that needs it (like a component or another service). Angular's dependency injection system will provide an instance of the service.
+
+Here's an example of injecting and using the `DataService` in a component:
+
+```typescript
+import { Component, OnInit } from '@angular/core';
+import { DataService } from './data.service'; // Import the service
+
+@Component({
+  selector: 'app-my-component',
+  template: ` <p>{{ appData }}</p> `,
+  // No need to add DataService to 'providers' if providedIn: 'root'
+})
+export class MyComponent implements OnInit {
+  appData: string = '';
+
+  // Inject the service in the constructor
+  constructor(private dataService: DataService) {}
+
+  ngOnInit(): void {
+    // Use the service method
+    this.appData = this.dataService.getAppData();
+  }
+}
+```
+
+## Further reading
+
+- [Angular Documentation: Services and Dependency Injection](https://angular.dev/guide/dependency-injection)
+- [Angular Documentation: Providing Dependencies](https://angular.dev/guide/dependency-injection/providing-dependencies)
+- [Angular Documentation: `ng generate service`](https://angular.dev/cli/generate/service)

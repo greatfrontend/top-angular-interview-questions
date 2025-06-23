@@ -1,0 +1,187 @@
+---
+title: What is State function and Style function?
+---
+
+## TL;DR
+
+In Angular animations, `state()` and `style()` are functions used to define the visual appearance of an element at specific points in an animation.
+
+- `state()`: This function defines a named state for an element, associating a name (like `'open'` or `'closed'`) with a specific set of CSS styles. It takes a state name (string) and a `style()` definition as arguments.
+- `style()`: This function defines a set of CSS-like properties and their values that describe the appearance of an element at a particular moment. It's used within `state()`, `transition()`, and `keyframes()` to specify styles. It takes an object literal where keys are style properties and values are their desired settings.
+
+Together, `state()` defines _what_ a state is named and _what_ it looks like using `style()`, while `style()` provides the actual visual description.
+
+```typescript
+import {
+  trigger,
+  state,
+  style,
+  transition,
+  animate,
+} from '@angular/animations';
+
+@Component({
+  selector: 'app-my-component',
+  template: `
+    <button [@myAnimation]="currentState" (click)="toggleState()">
+      Animate Me
+    </button>
+  `,
+  animations: [
+    trigger('myAnimation', [
+      // Define states using state() and style()
+      state(
+        'default',
+        style({
+          backgroundColor: 'blue',
+          transform: 'scale(1)',
+        })
+      ),
+      state(
+        'highlighted',
+        style({
+          backgroundColor: 'red',
+          transform: 'scale(1.1)',
+        })
+      ),
+      // Define transitions between states
+      transition('default => highlighted', [animate('300ms ease-in')]),
+      transition('highlighted => default', [animate('300ms ease-out')]),
+    ]),
+  ],
+})
+export class MyComponent {
+  currentState = 'default';
+
+  toggleState() {
+    this.currentState =
+      this.currentState === 'default' ? 'highlighted' : 'default';
+  }
+}
+```
+
+---
+
+## State function
+
+The `state()` function in Angular's animations module is used to define a named state within an animation `trigger`. It associates a specific name (a string) with a set of CSS-like styles defined using the `style()` function.
+
+### Purpose of state()
+
+The primary purpose of `state()` is to give a meaningful name to a particular visual configuration of an element. Instead of referring to an element's appearance solely by its CSS properties, you can refer to it by a state name like `'open'`, `'closed'`, `'visible'`, `'hidden'`, `'default'`, or `'active'`. This makes animation definitions more readable and maintainable.
+
+### How state() is used
+
+`state()` is always used within the array of definitions provided to the `trigger()` function. It takes two arguments:
+
+1.  A string representing the name of the state (e.g., `'open'`, `'closed'`).
+2.  A call to the `style()` function, which defines the CSS properties for that state.
+
+### Example of state()
+
+```typescript
+import { trigger, state, style } from '@angular/animations';
+
+animations: [
+  trigger('myTrigger', [
+    // Define a state named 'void' (used for elements entering/leaving)
+    state(
+      'void',
+      style({
+        opacity: 0,
+        transform: 'translateX(-100%)',
+      })
+    ),
+    // Define a state named 'visible'
+    state(
+      'visible',
+      style({
+        opacity: 1,
+        transform: 'translateX(0)',
+      })
+    ),
+    // Define a state named 'hidden'
+    state(
+      'hidden',
+      style({
+        opacity: 0,
+        transform: 'translateX(100%)',
+      })
+    ),
+  ]),
+];
+```
+
+In this example, we define three states: `'void'`, `'visible'`, and `'hidden'`, each associated with different `opacity` and `transform` styles. These state names can then be used in `transition()` definitions to animate between them.
+
+## Style function
+
+The `style()` function in Angular's animations module is used to define a set of CSS-like properties and their values. It describes the visual appearance of an element at a specific point in time, such as the beginning or end of a state, or at a specific frame within a transition.
+
+### Purpose of style()
+
+The purpose of `style()` is to provide a declarative way to specify the CSS properties that should be applied to an element. It acts like an inline style object but is used within the animation definition syntax.
+
+### How style() is used
+
+`style()` is a fundamental building block used in several places within Angular animation definitions:
+
+- **Within `state()`**: To define the styles associated with a named state.
+- **Within `transition()`**: To define the starting styles (optional) and ending styles (often implicitly defined by the target state) of a transition, or to define styles at specific offsets within an `animate()` step.
+- **Within `keyframes()`**: To define the styles at specific points (offsets) within a keyframe animation sequence.
+
+It takes a single argument: an object literal where keys are CSS property names (usually camelCase, like `backgroundColor` or `transform`) and values are their desired settings (strings or numbers).
+
+### Special properties in style()
+
+`style()` supports some special property names:
+
+- `*`: Represents any style property. This is often used in `state('*')` to match any state that hasn't been explicitly defined, or in `transition()` to match any starting or ending state.
+- `void`: Represents the state where an element is not attached to the DOM. This is commonly used in transitions for elements entering (`:enter` or `void => *`) or leaving (`:leave` or `* => void`) the view.
+
+### Example of style()
+
+```typescript
+import { style } from '@angular/animations';
+
+// Example usage within a state definition
+state(
+  'closed',
+  style({
+    width: '0px',
+    opacity: 0,
+    backgroundColor: 'grey',
+  })
+);
+
+// Example usage within a transition's animate step
+transition('open => closed', [
+  animate('1s', style({ opacity: 0.5 })), // Animate to 50% opacity over 1s
+  animate('500ms', style({ width: '0px', backgroundColor: 'grey' })), // Then animate width and color over 500ms
+]);
+
+// Example usage within keyframes
+animate(
+  '1s',
+  keyframes([
+    style({ opacity: 0, offset: 0 }), // Start at 0% opacity
+    style({ opacity: 0.5, offset: 0.5 }), // At 50% of the animation, be at 50% opacity
+    style({ opacity: 1, offset: 1 }), // End at 100% opacity
+  ])
+);
+```
+
+In these examples, `style()` is used to specify the exact visual properties (like `width`, `opacity`, `backgroundColor`) at different points in the animation sequence.
+
+## How state() and style() work together
+
+`state()` and `style()` are fundamentally linked. `state()` provides the _name_ for a visual configuration, while `style()` provides the _description_ of that configuration. You cannot define a state without specifying its styles using `style()`, and `style()` is most commonly used _within_ a `state()` definition to give meaning to a set of styles.
+
+When an element's animation binding (`[@triggerName]`) changes its bound value to match a defined state name, Angular knows which set of styles (defined by the `style()` within that `state()`) the element should eventually reach. The animation system then calculates the transition needed to animate from the element's current styles to the target state's styles, based on the defined `transition()` rules.
+
+## Further reading
+
+- [Angular Animations Guide - Defining states](https://angular.dev/guide/animations/defining-styles)
+- [Angular Animations Guide - The style function](https://angular.dev/guide/animations/defining-styles#the-style-function)
+- [Angular Animations API Reference - state()](https://angular.dev/api/animations/state)
+- [Angular Animations API Reference - style()](https://angular.dev/api/animations/style)

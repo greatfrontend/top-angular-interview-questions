@@ -1,0 +1,397 @@
+---
+title: How do you create custom validators in Angular?
+---
+
+## TL;DR
+
+Custom validators in Angular allow you to define specific validation rules beyond the built-in ones like `required` or `minLength`.
+
+You create a custom validator as a function that takes an `AbstractControl` (representing the form control, group, or array) as an argument and returns either:
+
+- `null` if the control's value is valid
+- A `ValidationErrors` object (e.g., `{ 'myError': true }`) if the value is invalid
+
+There are two types:
+
+- **Synchronous validators:** Return `ValidationErrors | null` immediately.
+- **Asynchronous validators:** Return `Promise<ValidationErrors | null>` or `Observable<ValidationErrors | null>`. These are used for validations that require time, like checking against a server API.
+
+In **Reactive Forms**, you pass these validator functions directly when creating `FormControl`, `FormGroup`, or `FormArray` instances. Synchronous validators go in the second argument array, and asynchronous validators go in the third argument array.
+
+```typescript
+// Sync validator example
+function forbiddenNameValidator(nameRe: RegExp): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const forbidden = nameRe.test(control.value);
+    return forbidden ? { forbiddenName: { value: control.value } } : null;
+  };
+}
+
+// Applying in Reactive Forms
+this.myForm = new FormGroup({
+  name: new FormControl('', [
+    Validators.required,
+    forbiddenNameValidator(/admin/i),
+  ]), // Sync validators
+  email: new FormControl('', [], [this.emailExistsValidator]), // Async validators
+});
+```
+
+In **Template-Driven Forms**, you typically create a directive that implements the `Validator` or `AsyncValidator` interface and registers itself with the `NG_VALIDATORS` or `NG_ASYNC_VALIDATORS` provider token.
+
+---
+
+## What are custom validators?
+
+Custom validators in Angular forms provide a way to implement specific validation logic that isn't covered by the built-in validators like `required`, `minLength`, `maxLength`, `pattern`, etc. They allow you to define your own rules based on the application's requirements, such as checking if a username is available, if two password fields match, or if a date is within a specific range.
+
+## Synchronous vs asynchronous validators
+
+Angular supports two types of custom validators:
+
+### Synchronous validators
+
+- These are functions that execute immediately and return a `ValidationErrors` object (if invalid) or `null` (if valid).
+- They are suitable for validation logic that doesn't require waiting for an external operation, such as checking format, length, or comparing values within the same form.
+
+### Asynchronous validators
+
+- These are functions that return a `Promise` or an `Observable` that eventually resolves to a `ValidationErrors` object (if invalid) or `null` (if valid).
+- They are necessary for validation logic that involves asynchronous operations, such as making an HTTP request to a server to check for uniqueness or performing a complex calculation that might take time.
+
+## Creating a synchronous custom validator function
+
+A synchronous validator is a function that accepts an `AbstractControl` instance as its argument. This `AbstractControl` can be a `FormControl`, `FormGroup`, or `FormArray`, allowing you to validate individual controls or entire groups/arrays of controls.
+
+The function must return:
+
+- `null` if the control's value is valid.
+- A `ValidationErrors` object (a key-value pair where the key is the error name, e.g., `'forbiddenName'`, and the value is typically `true` or an object containing details) if the control's value is invalid.
+
+Often, you'll create a _factory function_ that returns the actual validator function. This allows you to pass configuration parameters to your validator.
+
+```typescript
+import { AbstractControl, ValidatorFn, ValidationErrors } from '@angular/forms';
+
+/** A validator that checks if a control's value is forbidden */
+export function forbiddenNameValidator(nameRe: RegExp): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const forbidden = nameRe.test(control.value);
+    // If forbidden is true, return an object with the error key 'forbiddenName'
+    // Otherwise, return null
+    return forbidden ? { forbiddenName: { value: control.value } } : null;
+  };
+}
+```
+
+In this example, `forbiddenNameValidator` is the factory function that takes a regular expression (`nameRe`) and returns the actual validator function `(control: AbstractControl) => ValidationErrors | null`.
+
+## Applying synchronous validators in reactive forms
+
+In reactive forms, you apply validators by passing the validator function(s) directly to the `FormControl`, `FormGroup`, or `FormArray` constructor. Synchronous validators are passed as the second argument, which can be a single validator function or an array of functions.
+
+```typescript
+import { Component } from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { forbiddenNameValidator } from './forbidden-name.validator'; // Assuming the validator is in this file
+
+@Component({
+  selector: 'app-profile-editor',
+  template: `
+    <form [formGroup]="profileForm">
+      <div>
+        <label for="name">Name:</label>
+        <input id="name" type="text" formControlName="name" />
+        <!-- Display error message if 'forbiddenName' error exists -->
+        <div
+          *ngIf="
+            profileForm.get('name')?.hasError('forbiddenName') &&
+            profileForm.get('name')?.touched
+          ">
+          Name cannot be forbidden!
+        </div>
+      </div>
+
+      <!-- Other form controls -->
+    </form>
+  `,
+})
+export class ProfileEditorComponent {
+  profileForm = this.fb.group({
+    name: [
+      '',
+      [
+        Validators.required, // Built-in validator
+        Validators.minLength(4), // Built-in validator
+        forbiddenNameValidator(/admin/i), // Custom synchronous validator
+      ],
+    ],
+    // ... other controls
+  });
+
+  constructor(private fb: FormBuilder) {}
+}
+```
+
+You can pass multiple synchronous validators as an array to the second argument.
+
+## Applying synchronous validators in template-driven forms
+
+Applying custom validators in template-driven forms is more involved than in reactive forms. You need to create a directive that acts as the validator. This directive must:
+
+1.  Implement the `Validator` interface from `@angular/forms`.
+2.  Provide itself using the `NG_VALIDATORS` injection token.
+3.  Implement the `validate` method, which contains the validation logic and returns `ValidationErrors | null`.
+
+```typescript
+import { Directive, Input } from '@angular/core';
+import {
+  AbstractControl,
+  NG_VALIDATORS,
+  Validator,
+  ValidationErrors,
+} from '@angular/forms';
+
+@Directive({
+  selector: '[appForbiddenName]', // Attribute selector
+  providers: [
+    {
+      provide: NG_VALIDATORS,
+      useExisting: ForbiddenNameDirective,
+      multi: true,
+    },
+  ],
+})
+export class ForbiddenNameDirective implements Validator {
+  @Input('appForbiddenName') forbiddenName = ''; // Input to configure the validator
+
+  validate(control: AbstractControl): ValidationErrors | null {
+    // Use the forbiddenName input to create the RegExp
+    const nameRe = new RegExp(this.forbiddenName, 'i');
+    const forbidden = nameRe.test(control.value);
+    return forbidden ? { forbiddenName: { value: control.value } } : null;
+  }
+}
+```
+
+Then, you apply this directive as an attribute on the form control element in your template:
+
+```html
+<input type="text" name="name" ngModel appForbiddenName="admin" required />
+```
+
+The `ngModel` directive works together with the custom validator directive because the custom validator registers itself with `NG_VALIDATORS`, allowing the forms module to discover and use it.
+
+## Creating an asynchronous custom validator function
+
+An asynchronous validator function also takes an `AbstractControl` but returns a `Promise<ValidationErrors | null>` or an `Observable<ValidationErrors | null>`.
+
+```typescript
+import {
+  AbstractControl,
+  AsyncValidatorFn,
+  ValidationErrors,
+} from '@angular/forms';
+import { Observable, of } from 'rxjs';
+import {
+  map,
+  catchError,
+  debounceTime,
+  distinctUntilChanged,
+  switchMap,
+} from 'rxjs/operators';
+import { UserService } from './user.service'; // Assume you have a service
+
+/** An async validator that checks if a username exists */
+export function existingUsernameValidator(
+  userService: UserService
+): AsyncValidatorFn {
+  return (
+    control: AbstractControl
+  ): Promise<ValidationErrors | null> | Observable<ValidationErrors | null> => {
+    const username = control.value;
+
+    // Return null immediately if the control is empty or hasn't changed significantly
+    if (!username) {
+      return of(null);
+    }
+
+    // Use debounceTime and distinctUntilChanged for better performance with Observables
+    // Note: These operators are typically applied when setting up the validator in Reactive Forms,
+    // but showing them here illustrates the concept for Observable-based validators.
+    // A more common pattern is to apply them *before* passing the observable to the validator.
+
+    // Example using a service call returning an Observable
+    return userService.checkUsernameExists(username).pipe(
+      map(exists => (exists ? { usernameExists: true } : null)),
+      catchError(() => of(null)) // Handle errors gracefully, maybe treat as valid
+    );
+
+    // Example using a Promise (less common for HTTP, but possible)
+    // return userService.checkUsernameExistsPromise(username)
+    //   .then(exists => (exists ? { 'usernameExists': true } : null))
+    //   .catch(() => null); // Handle errors
+  };
+}
+```
+
+Notice the use of `debounceTime` and `distinctUntilChanged` in the context of Observables. While you _can_ include them inside the validator function's pipe, it's often cleaner and more performant to apply these operators _before_ passing the observable stream to the validator, especially in reactive forms. However, the validator function itself must return the final `Observable<ValidationErrors | null>`.
+
+## Applying asynchronous validators in reactive forms
+
+Asynchronous validators are passed as the _third_ argument to the `FormControl`, `FormGroup`, or `FormArray` constructor. This argument can be a single async validator function or an array of functions.
+
+```typescript
+import { Component } from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { existingUsernameValidator } from './existing-username.validator';
+import { UserService } from './user.service'; // Inject your service
+
+@Component({
+  selector: 'app-signup-form',
+  template: `
+    <form [formGroup]="signupForm">
+      <div>
+        <label for="username">Username:</label>
+        <input id="username" type="text" formControlName="username" />
+        <!-- Display error message -->
+        <div
+          *ngIf="
+            signupForm.get('username')?.hasError('usernameExists') &&
+            signupForm.get('username')?.pending
+          ">
+          Checking availability...
+        </div>
+        <div
+          *ngIf="
+            signupForm.get('username')?.hasError('usernameExists') &&
+            !signupForm.get('username')?.pending &&
+            signupForm.get('username')?.touched
+          ">
+          Username is already taken.
+        </div>
+      </div>
+      <!-- Other form controls -->
+    </form>
+  `,
+})
+export class SignupFormComponent {
+  signupForm = this.fb.group({
+    username: [
+      '',
+      [Validators.required, Validators.minLength(5)], // Sync validators (2nd arg)
+      [existingUsernameValidator(this.userService)], // Async validators (3rd arg)
+    ],
+    // ... other controls
+  });
+
+  constructor(private fb: FormBuilder, private userService: UserService) {}
+}
+```
+
+When an asynchronous validator is running, the form control's `pending` property will be `true`. You can use this to show a "checking..." indicator in your template.
+
+For better performance with Observable-based async validators in reactive forms, especially for inputs that trigger frequent checks (like username availability), it's highly recommended to use operators like `debounceTime` and `distinctUntilChanged` _before_ the validator function receives the value stream. This is typically done by piping the `valueChanges` observable.
+
+```typescript
+// Inside your component class
+constructor(private fb: FormBuilder, private userService: UserService) {
+  this.signupForm = this.fb.group({
+    username: ['',
+      [Validators.required, Validators.minLength(5)],
+      // Pass the validator function directly
+      [existingUsernameValidator(this.userService)]
+    ],
+    // ... other controls
+  });
+
+  // Apply debounce and distinct to the valueChanges stream *before* validation
+  // This requires manually triggering validation after the debounced value changes
+  // A more integrated approach is often preferred where the validator handles the debounce internally
+  // or you use a custom control value accessor that manages this.
+  // However, the standard way to apply async validators is as shown above,
+  // and the validator itself should handle the async logic efficiently (e.g., switchMap).
+}
+
+// A more robust async validator might look like this internally:
+export function existingUsernameValidator(userService: UserService): AsyncValidatorFn {
+  return (control: AbstractControl): Observable<ValidationErrors | null> => {
+    const username = control.value;
+    if (!username) {
+      return of(null); // Return null immediately for empty value
+    }
+
+    // The validator function itself returns the observable
+    // The form system subscribes and handles pending state
+    return userService.checkUsernameExists(username).pipe(
+      // No debounce/distinct here typically, the form system manages when to call validate
+      // If the service call is expensive, the service itself might handle caching/deduplication
+      map(exists => (exists ? { 'usernameExists': true } : null)),
+      catchError(() => of(null))
+    );
+  };
+}
+```
+
+_Note:_ While you _can_ put `debounceTime` and `distinctUntilChanged` inside the validator's pipe, the standard Angular forms behavior is to call the async validator on every value change. A more common pattern for performance is to ensure the _service_ or the _observable chain within the validator_ handles potential duplicate requests or delays using operators like `switchMap` (to cancel previous requests) and potentially `debounceTime` _within the service call or the validator's internal logic_ if needed, although `switchMap` is often sufficient when combined with the form's handling of pending state. The example above shows the standard validator signature.
+
+## Applying asynchronous validators in template-driven forms
+
+Similar to synchronous validators, asynchronous validators in template-driven forms require a directive that implements the `AsyncValidator` interface and provides itself using the `NG_ASYNC_VALIDATORS` token.
+
+```typescript
+import { Directive, Input } from '@angular/core';
+import {
+  AbstractControl,
+  NG_ASYNC_VALIDATORS,
+  AsyncValidator,
+  ValidationErrors,
+} from '@angular/forms';
+import { Observable } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
+import { UserService } from './user.service'; // Inject your service
+
+@Directive({
+  selector: '[appExistingUsername]',
+  providers: [
+    {
+      provide: NG_ASYNC_VALIDATORS,
+      useExisting: ExistingUsernameDirective,
+      multi: true,
+    },
+  ],
+})
+export class ExistingUsernameDirective implements AsyncValidator {
+  constructor(private userService: UserService) {} // Inject service
+
+  validate(
+    control: AbstractControl
+  ): Promise<ValidationErrors | null> | Observable<ValidationErrors | null> {
+    const username = control.value;
+    if (!username) {
+      return of(null); // Return null immediately for empty value
+    }
+
+    return this.userService.checkUsernameExists(username).pipe(
+      map(exists => (exists ? { usernameExists: true } : null)),
+      catchError(() => of(null)) // Handle errors
+    );
+  }
+}
+```
+
+Apply the directive in the template:
+
+```html
+<input type="text" name="username" ngModel appExistingUsername required />
+```
+
+Template-driven async validators can be less straightforward to manage regarding performance optimizations like debouncing compared to reactive forms, as the directive's `validate` method is called by the forms module. For complex async validation scenarios, reactive forms are generally preferred.
+
+## Further reading
+
+- [Angular Forms Validation](https://angular.dev/guide/forms/validation)
+- [Angular Forms Custom Validators](https://angular.dev/guide/forms/validation#custom-validators)
+- [Angular Forms Async Validators](https://angular.dev/guide/forms/validation#async-validators)
+- [Angular `ValidatorFn` and `AsyncValidatorFn` types](https://angular.dev/api/forms/ValidatorFn)
+- [Angular `ValidationErrors` interface](https://angular.dev/api/forms/ValidationErrors)

@@ -1,0 +1,187 @@
+---
+title: What are custom elements and how does it work internally?
+---
+
+## TL;DR
+
+Angular Custom Elements allow you to package an Angular component as a native web platform custom element. This makes it possible to use your Angular components in any HTML environment, whether it's a plain HTML page, a React app, a Vue app, or another framework, without needing the full Angular application context.
+
+Internally, Angular uses the `@angular/elements` package. The core mechanism involves the `createCustomElement` function, which takes an Angular component class and an injector. It returns a standard JavaScript class that extends `HTMLElement`. This generated class acts as a bridge:
+
+- It maps the native custom element lifecycle callbacks (like `connectedCallback`, `disconnectedCallback`) to the corresponding Angular component lifecycle hooks (`ngOnInit`, `ngOnDestroy`).
+- It handles property changes on the custom element, mapping them to Angular component inputs (`@Input`).
+- It dispatches native custom events when the Angular component emits through its outputs (`@Output`).
+- It manages the instantiation and change detection of the underlying Angular component within the custom element's DOM (often using Shadow DOM).
+
+You define the custom element using the standard `customElements.define()` browser API, associating a tag name with the class returned by `createCustomElement`.
+
+---
+
+## What are Angular custom elements?
+
+Angular Custom Elements are a feature that allows you to package an Angular component as a native web platform custom element. This means you can take a self-contained Angular component and make it usable in any environment that supports standard HTML and JavaScript, including plain HTML pages, other JavaScript frameworks like React or Vue, or even server-side rendered applications that need interactive components on the client.
+
+- They leverage the browser's built-in Web Components standard, specifically the Custom Elements API
+- They encapsulate the Angular component's logic, template, and styles within a single HTML tag
+- They provide a standard way to interact with the component using HTML attributes, DOM properties, and custom events, just like any native HTML element
+
+The primary use case is sharing Angular components with applications or teams that are not using the Angular framework, promoting reusability across different technology stacks.
+
+## How do Angular custom elements work internally?
+
+The magic behind Angular Custom Elements lies within the `@angular/elements` package. Here's a breakdown of the internal process:
+
+### Using `createCustomElement`
+
+The core function is `createCustomElement`. You provide it with an Angular component class and an Angular `Injector`.
+
+```typescript
+import { createCustomElement } from '@angular/elements';
+import { MyAngularComponent } from './my-angular.component';
+import { Injector } from '@angular/core';
+
+// Assuming 'injector' is obtained from your Angular application's environment
+// (e.g., from the application module or a specific element)
+const MyCustomElement = createCustomElement(MyAngularComponent, {
+  injector: injector,
+});
+```
+
+This function doesn't immediately register the element with the browser. Instead, it returns a standard JavaScript class that extends the native `HTMLElement`. This returned class is the bridge between the native DOM API and the Angular component.
+
+### Registering with the browser
+
+Once you have the class returned by `createCustomElement`, you register it with the browser's `CustomElementRegistry` using the standard `customElements.define()` method.
+
+```typescript
+customElements.define('my-custom-element', MyCustomElement);
+```
+
+The first argument is the tag name you want to use for your custom element (must contain a hyphen), and the second is the class returned by `createCustomElement`.
+
+### Lifecycle mapping
+
+The generated custom element class implements the standard Custom Element lifecycle callbacks:
+
+- `connectedCallback`: Called when the custom element is inserted into the DOM. The generated class uses this to instantiate the underlying Angular component and attach it to the custom element's DOM (often within a Shadow DOM root for encapsulation). This also triggers the Angular component's `ngOnInit` and `ngAfterViewInit` hooks.
+- `disconnectedCallback`: Called when the custom element is removed from the DOM. The generated class uses this to destroy the underlying Angular component instance, triggering its `ngOnDestroy` hook and cleaning up resources.
+- `attributeChangedCallback`: Called when one of the observed attributes changes. The generated class maps these attribute changes to the corresponding Angular component inputs (`@Input`) and triggers the Angular component's `ngOnChanges` hook.
+- `adoptedCallback`: Called when the custom element is moved to a new document (e.g., from an iframe).
+
+### Property and event handling
+
+- **Inputs (`@Input`)**: Angular component inputs are exposed as properties on the custom element instance. When you set a property on the custom element (e.g., `document.querySelector('my-custom-element').myInput = 'new value';`), the generated class detects this change and updates the corresponding input property on the underlying Angular component instance, triggering `ngOnChanges`. Attributes are also mapped to inputs if they are observed.
+- **Outputs (`@Output`)**: Angular component outputs are exposed as native Custom Events. When the Angular component emits a value through an `@Output` EventEmitter, the generated class dispatches a corresponding `CustomEvent` from the custom element instance. You can listen to these events using standard DOM event listeners (e.g., `element.addEventListener('myOutput', ...)`)
+
+### Change detection
+
+Handling change detection within the custom element is crucial. The generated class needs to ensure that when inputs change or events occur within the Angular component, the component's view is updated.
+
+- By default, Angular relies on Zone.js to detect asynchronous operations (like event handlers, timers, XHRs) and trigger change detection. When using custom elements, the Angular component runs within the context managed by the custom element wrapper. Zone.js helps bridge the gap, ensuring that changes originating from within the custom element's Angular component trigger the necessary updates.
+- For components using Signals (Available from Angular 17 onwards), the change detection is more granular and doesn't rely on Zone.js for signal updates. However, the custom element wrapper still needs to ensure that the Angular component is properly initialized and that input changes are propagated, which might still involve some level of integration with the Angular change detection mechanism triggered by the wrapper.
+
+### DOM attachment and encapsulation
+
+When the custom element is connected, the generated class instantiates the Angular component and attaches its host view to the custom element's DOM. By default, `@angular/elements` uses Shadow DOM to encapsulate the component's template and styles, preventing them from leaking out or being affected by external styles. You can configure this behavior.
+
+In essence, the `@angular/elements` package provides a sophisticated adapter layer that translates the native Custom Element API calls and events into the Angular component's lifecycle, input/output bindings, and change detection system.
+
+## Creating a custom element
+
+Here's a simplified example of how you might create and define an Angular custom element within an Angular application's module or a dedicated setup file:
+
+```typescript
+import { NgModule, Injector } from '@angular/core';
+import { createCustomElement } from '@angular/elements';
+import { BrowserModule } from '@angular/platform-browser';
+import { MyAngularComponent } from './my-angular.component';
+
+@NgModule({
+  imports: [BrowserModule],
+  declarations: [MyAngularComponent],
+  // entryComponents is deprecated, but needed for older Angular versions
+  // entryComponents: [MyAngularComponent]
+})
+export class AppModule {
+  constructor(private injector: Injector) {}
+
+  ngDoBootstrap() {
+    // Create the custom element class
+    const MyCustomElement = createCustomElement(MyAngularComponent, {
+      injector: this.injector,
+    });
+
+    // Define the custom element with a tag name
+    customElements.define('my-angular-element', MyCustomElement);
+  }
+}
+```
+
+In a standalone component setup (Angular 14+), you might do this directly without a traditional NgModule `entryComponents` or `ngDoBootstrap`:
+
+```typescript
+import { createCustomElement } from '@angular/elements';
+import { MyAngularComponent } from './my-angular.component';
+import { ApplicationRef, createComponent } from '@angular/core';
+
+// Assuming you have an ApplicationRef instance available
+// (e.g., injected in a service or setup function)
+function defineMyCustomElement(appRef: ApplicationRef) {
+  const MyCustomElement = createCustomElement(MyAngularComponent, {
+    injector: appRef.injector,
+  });
+  customElements.define('my-angular-element', MyCustomElement);
+}
+```
+
+You would then call `defineMyCustomElement` after bootstrapping your Angular application.
+
+## Using a custom element
+
+Once defined, you can use your custom element like any other HTML tag:
+
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Using Angular Custom Element</title>
+    <!-- Include the bundled JavaScript file containing your custom element -->
+    <script src="path/to/your/custom-elements-bundle.js"></script>
+  </head>
+  <body>
+    <h1>My Page Using a Custom Element</h1>
+
+    <!-- Use the custom element tag -->
+    <my-angular-element
+      title="Hello from outside Angular!"
+      [data]="{ id: 1, name: 'Example' }"
+      (buttonClick)="handleButtonClick($event)">
+    </my-angular-element>
+
+    <script>
+      const element = document.querySelector('my-angular-element');
+
+      // Set properties (maps to @Input)
+      element.title = 'Updated Title';
+      element.data = { id: 2, name: 'Another Example' };
+
+      // Listen for custom events (maps to @Output)
+      element.addEventListener('buttonClick', event => {
+        console.log('Button clicked!', event.detail); // event.detail contains the emitted value
+      });
+
+      // Example of calling a method if exposed (less common pattern)
+      // if (element.myMethod) {
+      //   element.myMethod();
+      // }
+    </script>
+  </body>
+</html>
+```
+
+Note that property binding syntax like `[data]` and event binding syntax like `(buttonClick)` are Angular template syntaxes and will _not_ work in plain HTML. You must interact with the custom element using standard DOM properties (`element.data = ...`) and event listeners (`element.addEventListener(...)`).
+
+## Further reading
+
+- [Angular Documentation: Angular elements overview](https://angular.dev/guide/elements)
+- [MDN Web Docs: Using custom elements](https://developer.mozilla.org/en-US/docs/Web/API/Web_Components/Using_custom_elements)

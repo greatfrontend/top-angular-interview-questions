@@ -1,0 +1,111 @@
+---
+title: What is the purpose of the async pipe in Angular templates?
+---
+
+## TL;DR
+
+The `async` pipe in Angular templates is used to automatically subscribe to an `Observable` or `Promise` and unwrap the value they emit. When a new value is emitted, the pipe triggers change detection to update the view.
+
+Its main purposes are:
+
+- Simplifying template code by removing the need for manual subscription and variable updates in the component class
+- Preventing memory leaks by automatically unsubscribing from the `Observable` when the component is destroyed
+- Handling the asynchronous nature of data streams gracefully in the template
+
+You use it directly in the template like this:
+
+```html
+<div>{{ data$ | async }}</div>
+```
+
+where `data---
+title: What is the purpose of the async pipe in Angular templates?
+
+---
+
+is an `Observable` property in your component.
+
+---
+
+## Purpose of the async pipe
+
+The `async` pipe is a built-in Angular pipe that simplifies working with asynchronous data sources like `Observable`s and `Promise`s directly within your component templates. Its primary function is to subscribe to the asynchronous source and automatically manage its lifecycle.
+
+### Unwrapping asynchronous values
+
+The core purpose is to "unwrap" the value emitted by an `Observable` or resolved by a `Promise`. Instead of subscribing in the component class and storing the value in a separate property, the `async` pipe handles this process directly in the template.
+
+### Automatic subscription and unsubscription
+
+When the component containing the template is initialized, the `async` pipe subscribes to the `Observable` or `Promise`. When the component is destroyed, the `async` pipe automatically unsubscribes. This is crucial for preventing memory leaks, as manual subscriptions in the component class require explicit unsubscription (e.g., in `ngOnDestroy`).
+
+### Triggering change detection
+
+When the `Observable` emits a new value or the `Promise` resolves, the `async` pipe detects this change and automatically triggers Angular's change detection mechanism for that specific part of the template. This ensures the view is updated with the latest data without requiring manual calls to `ChangeDetectorRef`.
+
+### Simplifying template code
+
+Using the `async` pipe makes templates cleaner and more readable. You can bind directly to the `Observable` or `Promise` property in your component class, reducing the amount of boilerplate code needed for subscription management.
+
+## How it works
+
+The `async` pipe maintains a subscription to the input `Observable` or `Promise`.
+
+- **For Observables:** It subscribes when the component is initialized. When the `Observable` emits a value, the pipe stores it and triggers change detection. If the `Observable` completes or errors, the pipe handles it appropriately. When the component is destroyed, it calls `unsubscribe()` on the subscription.
+- **For Promises:** It attaches a `.then()` handler. When the `Promise` resolves, the pipe stores the resolved value and triggers change detection.
+
+The pipe returns `null` until the first value is emitted by the `Observable` or the `Promise` resolves.
+
+## Benefits of using the async pipe
+
+- **Memory leak prevention:** Automatic unsubscription eliminates a common source of memory leaks when dealing with Observables.
+- **Simplified component logic:** Reduces the need for manual subscription management (`.subscribe()`, `.unsubscribe()`) in the component class.
+- **Efficient change detection:** Integrates well with Angular's change detection, updating only the necessary parts of the view when new data arrives.
+- **Readability:** Makes templates clearer by showing that a value is asynchronous.
+
+## Example
+
+Consider a component that fetches user data asynchronously:
+
+```typescript
+import { Component } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+
+interface User {
+  id: number;
+  name: string;
+}
+
+@Component({
+  selector: 'app-user-profile',
+  template: `
+    <h2>User Profile</h2>
+    <div *ngIf="user$ | async as user">
+      <p>ID: {{ user.id }}</p>
+      <p>Name: {{ user.name }}</p>
+    </div>
+    <div *ngIf="!(user$ | async)">Loading user data...</div>
+  `,
+})
+export class UserProfileComponent {
+  user$: Observable<User>;
+
+  constructor(private http: HttpClient) {
+    // Assume this fetches user data from an API
+    this.user$ = this.http.get<User>('/api/user/1');
+  }
+}
+```
+
+In this example, `user---
+title: What is the purpose of the async pipe in Angular templates?
+
+---
+
+is an `Observable`. The template uses `user$ | async` to subscribe to it. The `*ngIf="user$ | async as user"` syntax is particularly useful: it waits for the `Observable` to emit a value, assigns that value to a local template variable `user`, and then renders the content inside the `div`. This avoids displaying content before the data is available.
+
+## Further reading
+
+- [Angular Documentation: AsyncPipe](https://angular.dev/api/common/AsyncPipe)
+- [Angular Documentation: Working with Observables](https://angular.dev/guide/observables)

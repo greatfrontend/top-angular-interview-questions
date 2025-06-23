@@ -1,0 +1,79 @@
+---
+title: What is Angular and how is it different from AngularJS?
+---
+
+## TL;DR
+
+Angular is a modern, open-source framework developed by Google for building large-scale, single-page applications (SPAs) primarily using TypeScript. It follows a component-based architecture and provides a comprehensive set of tools and features for development, including routing, forms, state management, and testing utilities.
+
+Angular is a complete rewrite of its predecessor, AngularJS (version 1.x), and is not backward compatible. The key differences include:
+
+- **Architecture**: Angular uses a component-based structure, while AngularJS used MVC/MVVM patterns with controllers and scopes.
+- **Language**: Angular is built with and strongly encourages TypeScript, whereas AngularJS was primarily JavaScript.
+- **Performance**: Angular offers significantly improved performance due to features like Ahead-of-Time (AoT) compilation and a more efficient change detection mechanism.
+- **Mobile Support**: Angular was designed with mobile development in mind from the start.
+- **CLI**: Angular includes a powerful command-line interface (CLI) for scaffolding, building, and testing applications, which was not a built-in feature of AngularJS.
+
+---
+
+## What is Angular?
+
+Angular is a popular open-source framework for building client-side single-page applications (SPAs). Developed and maintained by Google and a community of developers, it provides a structured approach to building complex web applications.
+
+### Key characteristics of Angular
+
+- **Component-based architecture**: Applications are built as a tree of components, where each component manages a part of the UI and its logic.
+- **TypeScript**: Angular is written in TypeScript, a superset of JavaScript that adds static typing and other features, improving code maintainability and scalability.
+- **Comprehensive framework**: It includes built-in solutions for common web development tasks such as routing, form handling, client-server communication, and state management.
+- **Modularity**: Applications are organized into NgModules (or use standalone components available from Angular 14 onwards), which group related components, services, and other code.
+- **Tooling**: The Angular CLI provides robust tools for creating, developing, testing, and deploying Angular applications.
+- **Performance**: Features like Ahead-of-Time (AoT) compilation and efficient change detection contribute to good application performance.
+
+Angular is suitable for building large, complex enterprise-level applications as well as smaller projects, providing a strong foundation and ecosystem.
+
+## How is Angular different from AngularJS?
+
+Angular (versions 2 and later) is a complete rewrite of AngularJS (version 1.x). It was built from the ground up to address the limitations of AngularJS and leverage modern web standards and practices. It is not an incremental upgrade, meaning applications written in AngularJS cannot be simply updated to Angular without significant refactoring or rewriting.
+
+Here are the major differences:
+
+### Architecture
+
+Angular adopts a component-based architecture. An application is a tree of components, each consisting of a template, a class (with logic), and metadata. This is a significant shift from AngularJS, which primarily used Model-View-Controller (MVC) or Model-View-ViewModel (MVVM) patterns with concepts like controllers, `$scope`, and directives playing different roles.
+
+### Language
+
+Angular is built upon and strongly encourages the use of TypeScript. TypeScript provides static typing, interfaces, decorators, and other features that enhance code quality, tooling support, and developer productivity, especially in large projects. AngularJS was primarily written in plain JavaScript (ES5), although ES6 could be used with transpilers.
+
+### Performance
+
+Angular offers substantial performance improvements over AngularJS.
+
+- **Change Detection**: Angular uses a more efficient change detection mechanism, often leveraging zones or zone-less strategies, compared to AngularJS's digest cycle, which could become slow in complex applications.
+- **Compilation**: Angular supports Ahead-of-Time (AoT) compilation, which compiles templates into JavaScript code during the build process. This results in faster rendering and smaller application bundles compared to AngularJS's Just-in-Time (JIT) compilation, which happens in the browser at runtime.
+
+### Mobile Support
+
+Angular was designed with mobile development in mind from its inception. It supports building progressive web applications (PWAs) and can be used with frameworks like NativeScript or Ionic to build native or hybrid mobile apps. AngularJS was less optimized for mobile environments.
+
+### Command Line Interface (CLI)
+
+Angular provides an official, powerful CLI tool (`@angular/cli`) that streamlines the development workflow. It allows developers to easily create projects, generate components, services, modules, run tests, and build applications with optimized configurations. AngularJS relied more on third-party tools like Yeoman, Grunt, or Gulp for scaffolding and build processes.
+
+### Syntax and Directives
+
+The syntax for directives and data binding is different between the two frameworks. Angular uses `[]` for property binding, `()` for event binding, and `[()]` for two-way binding (NgModel), along with structural directives like `*ngIf` and `*ngFor`. AngularJS used prefixes like `ng-` (e.g., `ng-model`, `ng-repeat`). The concept of directives is also more unified in Angular, with components being a specific type of directive.
+
+### Dependency Injection
+
+Both frameworks use dependency injection, but Angular's system is hierarchical and more flexible. Services can be provided at different levels of the component tree or application root, allowing for better control over service instances and scope. AngularJS had a flatter, global-like dependency injection system.
+
+### Modularity
+
+Angular applications are structured using NgModules (or standalone components). NgModules declare which components, directives, and pipes belong to them and make services available through providers. This provides a clear way to organize and encapsulate parts of the application. AngularJS had a module system, but it was less strict and often led to more global scope pollution.
+
+## Further reading
+
+- [Angular Documentation](https://angular.dev/guide/what-is-angular)
+- [AngularJS Documentation (for historical context)](https://docs.angularjs.org/guide)
+- [Angular vs AngularJS: A Comprehensive Comparison](https://www.browserstack.com/guide/angular-vs-angularjs)

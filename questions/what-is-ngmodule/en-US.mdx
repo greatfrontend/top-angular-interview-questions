@@ -1,0 +1,175 @@
+---
+title: What is an ngModule?
+---
+
+## TL;DR
+
+An `NgModule` is a class decorated with `@NgModule` that defines a module in Angular. It acts as a container for a cohesive block of functionality, grouping related components, directives, pipes, and services.
+
+Its primary purposes are to:
+
+- Organize application code into logical units
+- Configure the Angular compiler to process components and templates
+- Configure the injector to make services available for dependency injection
+- Control the visibility of components, directives, and pipes to other modules
+
+Key properties within the `@NgModule` decorator include:
+
+- `declarations`: Lists components, directives, and pipes that belong to this module
+- `imports`: Lists other `NgModule`s whose exported classes are needed by components in this module
+- `providers`: Lists services that the injector should create and make available
+- `exports`: Lists components, directives, and pipes from `declarations` (or modules from `imports`) that other modules can use
+
+While standalone components (available from Angular 14 onwards) reduce the need for `declarations` and `exports` within `NgModule`s, modules are still used for grouping imports and providing services.
+
+---
+
+## What is an NgModule?
+
+An `NgModule` is a fundamental building block in Angular applications. It is a class decorated with the `@NgModule` decorator, which provides metadata that tells Angular how to compile and run the code within that module. Think of it as a container that groups related parts of your application, such as components, directives, pipes, and services, into a functional unit.
+
+## Purpose of NgModules
+
+NgModules serve several key purposes in an Angular application:
+
+### Organizing code
+
+They help structure your application by grouping related features into logical units. This improves maintainability and readability, especially in larger applications. For example, you might have a `UserModule` for all user-related features or a `ProductModule` for e-commerce functionality.
+
+### Configuring the Angular compiler
+
+The metadata provided in the `@NgModule` decorator tells the Angular compiler which components, directives, and pipes belong to the module and how they interact. This allows Angular to correctly compile templates and link different parts of your application.
+
+### Configuring the injector
+
+The `providers` array within `@NgModule` configures the dependency injection system. It tells Angular which services should be available within the module's scope (or globally, depending on the provider configuration) and how to create them.
+
+### Defining boundaries and visibility
+
+NgModules control which components, directives, and pipes are visible and usable by other modules. Items listed in `declarations` are private to the module unless explicitly listed in `exports`. Items listed in `exports` become public API of the module.
+
+## Key `@NgModule` Properties
+
+The `@NgModule` decorator accepts a metadata object with several important properties:
+
+### `declarations`
+
+This array lists the components, directives, and pipes that belong to _this specific_ module. These are the classes that are compiled and used within the module's templates. A component, directive, or pipe can only be declared in _one_ `NgModule`.
+
+```typescript
+import { NgModule } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { MyComponent } from './my.component';
+import { MyDirective } from './my.directive';
+import { MyPipe } from './my.pipe';
+
+@NgModule({
+  declarations: [MyComponent, MyDirective, MyPipe],
+  imports: [CommonModule],
+  // ... other properties
+})
+export class MyFeatureModule {}
+```
+
+### `imports`
+
+This array lists other `NgModule`s whose exported classes (components, directives, pipes) are needed by the components, directives, or pipes declared in _this_ module. For example, if your component uses `ngIf` or `ngFor`, you need to import `CommonModule`. If it uses form directives like `ngModel`, you need to import `FormsModule` or `ReactiveFormsModule`.
+
+```typescript
+import { NgModule } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms'; // Needed for ngModel
+import { MyComponent } from './my.component';
+
+@NgModule({
+  declarations: [MyComponent],
+  imports: [
+    CommonModule, // Provides ngIf, ngFor, etc.
+    FormsModule, // Provides ngModel
+  ],
+  // ... other properties
+})
+export class MyFeatureModule {}
+```
+
+### `providers`
+
+This array lists the services that the dependency injector should create and make available within this module's injector. Services provided here are typically available to all components, directives, pipes, and other services declared or imported within this module. Services can also be provided at the root level using `providedIn: 'root'` (available from Angular 6 onwards), which is the preferred way for application-wide singletons.
+
+```typescript
+import { NgModule } from '@angular/core';
+import { MyService } from './my.service';
+
+@NgModule({
+  // ... declarations, imports
+  providers: [
+    MyService, // Makes MyService available via DI
+  ],
+  // ... exports
+})
+export class MyFeatureModule {}
+```
+
+### `exports`
+
+This array lists the components, directives, pipes, or even other `NgModule`s from _this_ module's `declarations` or `imports` that should be available for other modules to use. Anything declared in `declarations` is private by default unless exported.
+
+```typescript
+import { NgModule } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { MyComponent } from './my.component';
+import { MyDirective } from './my.directive';
+
+@NgModule({
+  declarations: [MyComponent, MyDirective],
+  imports: [CommonModule],
+  exports: [
+    MyComponent, // Make MyComponent available to modules that import MyFeatureModule
+    MyDirective, // Make MyDirective available
+    CommonModule, // Re-export CommonModule if components in other modules need its exports
+  ],
+})
+export class MyFeatureModule {}
+```
+
+### `bootstrap`
+
+This property is used _only_ in the root `AppModule`. It lists the root component(s) that Angular should bootstrap when the application starts. Typically, this is just one component, the main application shell.
+
+```typescript
+import { NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+import { AppComponent } from './app.component';
+
+@NgModule({
+  declarations: [AppComponent],
+  imports: [
+    BrowserModule, // Required for running in a browser
+  ],
+  providers: [],
+  bootstrap: [AppComponent], // Specifies the root component to start
+})
+export class AppModule {}
+```
+
+## Root Module vs. Feature Modules
+
+Every Angular application has at least one root module, conventionally named `AppModule`. This module is bootstrapped to launch the application. Most applications also have multiple feature modules, which represent distinct areas of functionality (e.g., `AdminModule`, `UserModule`, `DashboardModule`). Feature modules are typically imported by the root module or lazy-loaded via the router.
+
+## NgModule and Standalone Components
+
+Available from Angular 14 onwards, standalone components, directives, and pipes offer an alternative way to build Angular applications without requiring them to be declared within an `NgModule`.
+
+- **Standalone components:** Can directly import other standalone components, directives, pipes, or even `NgModule`s using their `imports` property. They don't need to be listed in an `NgModule`'s `declarations`.
+- **NgModules still used:** While standalone components reduce the need for `declarations` and `exports` in many cases, `NgModule`s are still used for:
+  - Grouping related standalone components/directives/pipes for easier import (by exporting them).
+  - Providing services using the `providers` array, especially for module-scoped services or when configuring core Angular services.
+  - Configuring the application's root setup (`AppModule` often remains, even if it imports a standalone root component).
+  - Lazy loading routes that point to `NgModule`s (though lazy loading standalone components directly is also possible).
+
+NgModules remain a core concept for structuring and configuring Angular applications, even with the introduction of standalone components.
+
+## Further reading
+
+- [Angular Documentation: NgModules](https://angular.dev/guide/ngmodules)
+- [Angular Documentation: Standalone components, directives, and pipes](https://angular.dev/guide/standalone)

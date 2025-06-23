@@ -1,0 +1,264 @@
+---
+title: What is an observable and how is it used?
+---
+
+## TL;DR
+
+An Observable represents a stream of data or events over time. It's a core concept in reactive programming and is used extensively in Angular for handling asynchronous operations like HTTP requests, user input events, and routing changes.
+
+Think of it as a producer that pushes multiple values to consumers (called Observers) over time. You subscribe to an Observable to start receiving these values.
+
+Key characteristics:
+
+- **Lazy:** Nothing happens until you subscribe
+- **Asynchronous:** Designed for operations that complete over time
+- **Multiple values:** Can emit zero, one, or many values
+- **Cancellable:** Subscriptions can be easily cancelled
+- **Composable:** Can be transformed and combined using operators
+
+In Angular, you'll commonly subscribe to Observables returned by the `HttpClient` for API calls, or Observables representing form value changes or router events. It's crucial to unsubscribe when the component is destroyed to prevent memory leaks, although the `async` pipe handles this automatically in templates.
+
+---
+
+## What is an observable?
+
+An Observable is a fundamental building block in reactive programming, representing a collection of multiple values over time. Unlike a regular function that returns a single value or a Promise that returns a single value asynchronously, an Observable can emit zero, one, or many values over its lifetime. It's a "push" system, meaning the Observable pushes data to its consumers (called Observers) when it's ready.
+
+Observables are provided by the RxJS library, which Angular uses heavily for handling asynchronous operations and event management.
+
+### Key concepts
+
+- **Producer:** The source that creates the stream of data. This could be an HTTP request, a DOM event listener, an interval timer, etc.
+- **Observable:** The wrapper around the producer that defines how values are delivered to subscribers.
+- **Observer (or Consumer):** An object with callback functions (`next`, `error`, `complete`) that receives notifications from the Observable.
+- **Subscription:** The result of calling the `subscribe()` method on an Observable. It represents the ongoing execution of the Observable and allows for cancelling the execution (unsubscribing).
+
+### Observable notifications
+
+An Observable can notify its Observer(s) in three ways:
+
+- `next(value)`: Pushes the next value in the stream to the Observer. This can happen multiple times.
+- `error(err)`: Pushes an error notification to the Observer. This terminates the Observable execution.
+- `complete()`: Pushes a completion notification to the Observer. This indicates that the Observable has finished emitting values and terminates the execution.
+
+Once an Observable emits an `error` or `complete` notification, it cannot emit any further `next` values.
+
+## How is an observable used in Angular?
+
+Observables are pervasive in Angular applications for managing asynchronous operations and handling streams of data or events.
+
+### Handling HTTP requests
+
+The `HttpClient` service in Angular returns Observables for all its methods (`get`, `post`, `put`, `delete`, etc.). You subscribe to these Observables to receive the response data.
+
+```typescript
+import { Component, OnInit } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+
+interface User {
+  id: number;
+  name: string;
+}
+
+@Component({
+  selector: 'app-user-list',
+  template: `
+    <h2>Users</h2>
+    <ul>
+      <li *ngFor="let user of users">{{ user.name }}</li>
+    </ul>
+  `,
+})
+export class UserListComponent implements OnInit {
+  users: User[] = [];
+  users$: Observable<User[]> | undefined; // Using async pipe
+
+  constructor(private http: HttpClient) {}
+
+  ngOnInit(): void {
+    // Method 1: Subscribe manually
+    this.http.get<User[]>('/api/users').subscribe({
+      next: data => (this.users = data),
+      error: err => console.error('Error fetching users', err),
+      complete: () => console.log('User fetch complete'),
+    });
+
+    // Method 2: Using async pipe in template (preferred for simple cases)
+    this.users$ = this.http.get<User[]>('/api/users');
+  }
+}
+```
+
+When using the `async` pipe in the template (`<li *ngFor="let user of users$ | async">`), Angular automatically subscribes to the Observable when the component is initialized and unsubscribes when the component is destroyed, preventing memory leaks.
+
+### Handling events
+
+Angular's event system, especially for reactive forms or router events, often exposes streams as Observables.
+
+- **Reactive Forms:** `FormControl`, `FormGroup`, and `FormArray` have `valueChanges` and `statusChanges` properties which are Observables.
+
+  ```typescript
+  import { Component, OnInit } from '@angular/core';
+  import { FormBuilder, FormGroup } from '@angular/forms';
+  import { debounceTime } from 'rxjs/operators';
+
+  @Component({
+    selector: 'app-search',
+    template: `
+      <form [formGroup]="searchForm">
+        <input formControlName="query" placeholder="Search..." />
+      </form>
+    `,
+  })
+  export class SearchComponent implements OnInit {
+    searchForm: FormGroup;
+
+    constructor(private fb: FormBuilder) {
+      this.searchForm = this.fb.group({
+        query: [''],
+      });
+    }
+
+    ngOnInit(): void {
+      this.searchForm
+        .get('query')
+        ?.valueChanges.pipe(debounceTime(300)) // Wait 300ms after last keystroke
+        .subscribe(query => {
+          console.log('Search query changed:', query);
+          // Perform search based on query
+        });
+    }
+  }
+  ```
+
+- **Router Events:** The Angular `Router` service provides an `events` property, which is an Observable stream of navigation events.
+
+  ```typescript
+  import { Component } from '@angular/core';
+  import { Router, NavigationEnd } from '@angular/router';
+  import { filter } from 'rxjs/operators';
+
+  @Component({
+    selector: 'app-root',
+    template: '<router-outlet></router-outlet>',
+  })
+  export class AppComponent {
+    constructor(private router: Router) {
+      this.router.events
+        .pipe(filter(event => event instanceof NavigationEnd))
+        .subscribe(event => {
+          console.log('Navigation ended:', event);
+          // Perform actions after navigation
+        });
+    }
+  }
+  ```
+
+### State management
+
+While Signals (available from Angular 16) offer a modern approach to fine-grained reactivity and state management, Observables remain crucial for handling asynchronous state updates, streams of actions, and integrating with libraries like NgRx.
+
+### Using operators
+
+RxJS provides a rich set of operators that allow you to transform, filter, combine, and manipulate Observables. These are essential for building complex asynchronous logic. Examples include `map`, `filter`, `debounceTime`, `switchMap`, `mergeMap`, `combineLatest`, etc.
+
+```typescript
+import { Component, OnInit } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
+
+interface Product {
+  id: number;
+  name: string;
+  price: number;
+}
+
+@Component({
+  selector: 'app-product-list',
+  template: `
+    <h2>Products</h2>
+    <ul>
+      <li *ngFor="let product of products">
+        {{ product.name }} - {{ product.price | currency }}
+      </li>
+    </ul>
+  `,
+})
+export class ProductListComponent implements OnInit {
+  products: Product[] = [];
+
+  constructor(private http: HttpClient) {}
+
+  ngOnInit(): void {
+    this.http
+      .get<Product[]>('/api/products')
+      .pipe(
+        // Use map operator to transform the data
+        map(products => products.filter(p => p.price > 10)), // Filter products over $10
+        catchError(error => {
+          // Handle errors
+          console.error('Error fetching products', error);
+          return []; // Return an empty array or rethrow
+        })
+      )
+      .subscribe({
+        next: filteredProducts => (this.products = filteredProducts),
+        error: err => console.error('Subscription error', err), // This catches errors not handled by catchError
+      });
+  }
+}
+```
+
+### Unsubscribing
+
+When you manually subscribe to an Observable in a component class, it's critical to unsubscribe when the component is destroyed to prevent memory leaks. This is typically done in the `ngOnDestroy` lifecycle hook.
+
+```typescript
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { interval, Subscription } from 'rxjs';
+
+@Component({
+  selector: 'app-timer',
+  template: ` <p>Timer: {{ counter }}</p> `,
+})
+export class TimerComponent implements OnInit, OnDestroy {
+  counter = 0;
+  private timerSubscription: Subscription | undefined;
+
+  ngOnInit(): void {
+    this.timerSubscription = interval(1000).subscribe(value => {
+      this.counter = value;
+    });
+  }
+
+  ngOnDestroy(): void {
+    // Unsubscribe to prevent memory leaks
+    if (this.timerSubscription) {
+      this.timerSubscription.unsubscribe();
+    }
+  }
+}
+```
+
+As mentioned, the `async` pipe handles this automatically for Observables used directly in templates, making it the preferred approach for many scenarios.
+
+## Observable vs Promise
+
+While both Observables and Promises are used for asynchronous operations, they have key differences:
+
+- **Values:** Promises emit a single value (or an error). Observables can emit multiple values over time.
+- **Laziness:** Promises are eager; they start executing as soon as they are created. Observables are lazy; they only start executing when you subscribe to them.
+- **Cancellability:** Promises are not easily cancellable once started. Observables are cancellable by calling `unsubscribe()` on the Subscription.
+- **Composability:** Observables are highly composable using a wide range of operators. Promises have limited composition capabilities (`.then()`, `.catch()`, `.finally()`).
+
+For operations that return a single result (like a simple HTTP GET), a Promise might seem sufficient, but Angular's consistent use of Observables (even for single-value HTTP responses) allows you to leverage the full power of RxJS operators for transformation, error handling, and combining multiple asynchronous sources.
+
+## Further reading
+
+- [RxJS Documentation](https://rxjs.dev/guide/overview)
+- [Angular Guide: Using Observables](https://angular.dev/guide/observables)
+- [Angular Guide: HTTP Client](https://angular.dev/guide/http)
+- [Angular Guide: Reactive Forms](https://angular.dev/guide/forms/reactive-forms)
+- [Angular Guide: Router](https://angular.dev/guide/router)

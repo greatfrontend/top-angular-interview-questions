@@ -1,0 +1,166 @@
+---
+title: How does an Angular application work?
+---
+
+## TL;DR
+
+An Angular application starts execution from the `main.ts` file, which bootstraps the root module, typically `AppModule`. This module declares and imports other modules and components needed for the application. The root module then bootstraps the root component, usually `AppComponent`.
+
+Components are the building blocks of an Angular application, consisting of a TypeScript class for logic, an HTML template for the view, and CSS styles. Angular uses data binding to synchronize data between the component class and its template.
+
+Angular's compiler processes the application code (TypeScript, HTML, CSS) during the build process, often using Ahead-of-Time (AOT) compilation to produce optimized JavaScript bundles. When the application runs in the browser, Angular takes control of the specified root element in `index.html`, renders the root component's template, and manages updates to the DOM based on changes detected in the application state. Dependency injection is used throughout the application to provide services and other dependencies to components and services.
+
+---
+
+## How an Angular application works
+
+An Angular application is a collection of components, modules, services, and other files that work together to create a dynamic web experience. Here's a breakdown of how it typically works from startup to rendering.
+
+### Entry point and bootstrapping
+
+Every Angular application has an entry point, which is usually the `main.ts` file. This file is responsible for bootstrapping the application, meaning it initializes the Angular environment and starts the execution of the root module.
+
+```typescript
+// main.ts
+import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
+import { AppModule } from './app/app.module';
+
+platformBrowserDynamic()
+  .bootstrapModule(AppModule)
+  .catch(err => console.error(err));
+```
+
+- `platformBrowserDynamic` is used for just-in-time (JIT) compilation in the browser, typically used during development. For production builds, Ahead-of-Time (AOT) compilation is preferred, and the bootstrapping might look slightly different or be handled by the build process.
+- `bootstrapModule(AppModule)` tells Angular to load and initialize the `AppModule`, which is the application's root module.
+
+### Modules (`NgModule`)
+
+Angular applications are modular. `NgModule`s are containers for a cohesive block of functionality. The root module (`AppModule`) is essential and serves as the entry point for the application's structure.
+
+- An `NgModule` declares which components, directives, and pipes belong to it.
+- It imports functionality from other modules (like `BrowserModule`, `FormsModule`, `HttpClientModule`).
+- It exports components, directives, or pipes that other modules can use.
+- The root module's `bootstrap` array specifies the root component(s) that Angular should place into the host web page (`index.html`).
+
+```typescript
+// app.module.ts
+import { NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+
+import { AppComponent } from './app.component';
+
+@NgModule({
+  declarations: [AppComponent],
+  imports: [BrowserModule],
+  providers: [],
+  bootstrap: [AppComponent], // Specifies the root component
+})
+export class AppModule {}
+```
+
+### Components
+
+Components are the fundamental building blocks of an Angular application's user interface. Each component controls a patch of the screen called a view.
+
+- A component consists of:
+  - A TypeScript class (`@Component` decorator) containing the component's logic, properties, and methods.
+  - An HTML template defining the component's view structure.
+  - CSS styles defining the component's appearance.
+- The `@Component` decorator links the class, template, and styles together and provides metadata like the component's selector (how it's used in HTML).
+
+```typescript
+// app.component.ts
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-root', // How to use this component in HTML
+  templateUrl: './app.component.html', // The component's HTML template
+  styleUrls: ['./app.component.css'], // The component's styles
+})
+export class AppComponent {
+  title = 'my-angular-app'; // A property in the component class
+}
+```
+
+```html
+<!-- app.component.html -->
+<h1>Welcome to {{ title }}!</h1>
+<!-- Using interpolation to display the property -->
+```
+
+### Data binding
+
+Angular uses data binding to synchronize data between the component class and its template. This allows for dynamic updates to the view when the data changes and vice-versa.
+
+- **Interpolation (`{{ ... }}`)**: Displays component property values in the template.
+- **Property binding (`[property]="data"`)**: Binds a component property value to an HTML element property.
+- **Event binding (`(event)="handler()"`)**: Listens for events on HTML elements and executes component methods.
+- **Two-way binding (`[(ngModel)]="data"`)**: Combines property and event binding to synchronize data between a form input element and a component property (requires `FormsModule`).
+
+### Dependency injection
+
+Angular uses a hierarchical dependency injection system. This allows components and services to declare their dependencies without needing to know how to create them. Angular's injector provides the required instances.
+
+- Services, which contain business logic or data fetching, are often provided via dependency injection.
+- Dependencies are typically declared in the constructor of a class.
+
+```typescript
+// my.service.ts
+import { Injectable } from '@angular/core';
+
+@Injectable({
+  providedIn: 'root', // Makes the service available throughout the app
+})
+export class MyService {
+  getData() {
+    return 'Some data';
+  }
+}
+```
+
+```typescript
+// my.component.ts
+import { Component } from '@angular/core';
+import { MyService } from './my.service';
+
+@Component({
+  selector: 'app-my',
+  template: '<p>{{ data }}</p>',
+})
+export class MyComponent {
+  data: string;
+
+  constructor(private myService: MyService) {
+    // Injecting the service
+    this.data = this.myService.getData();
+  }
+}
+```
+
+### The build process
+
+Before running in a browser, Angular applications written in TypeScript and using Angular templates need to be compiled into standard JavaScript and HTML. The Angular CLI handles this process.
+
+- **TypeScript compilation**: TypeScript code is compiled into JavaScript.
+- **Template compilation**: Angular HTML templates are compiled into code that creates DOM elements.
+- **Bundling**: The application's code, along with necessary libraries, is bundled into a few files for efficient loading.
+- **Ahead-of-Time (AOT) compilation**: By default, the Angular CLI uses AOT compilation for production builds. This compiles the Angular templates and components during the build phase, resulting in faster rendering and smaller bundles compared to Just-in-Time (JIT) compilation (which happens in the browser at runtime).
+
+### Rendering and change detection
+
+Once the compiled application loads in the browser:
+
+1.  Angular takes control of the host element specified in `index.html` (usually `<app-root>`).
+2.  It renders the template of the root component (`AppComponent`).
+3.  Angular sets up change detection. Historically, this relied on Zone.js to monkey-patch asynchronous browser APIs (like `setTimeout`, `addEventListener`, `XMLHttpRequest`) to notify Angular when potential changes occurred.
+4.  Available from Angular 16 onwards, Signals provide a new, more granular, and performant way to manage state and trigger updates without Zone.js.
+5.  When data bound in a template changes (either through user interaction, asynchronous operations, or signal updates), Angular's change detection mechanism identifies which components are affected and efficiently updates only the necessary parts of the DOM.
+
+## Further reading
+
+- [Angular Documentation: Architecture Overview](https://angular.dev/guide/architecture)
+- [Angular Documentation: NgModules](https://angular.dev/guide/ngmodules)
+- [Angular Documentation: Components](https://angular.dev/guide/components)
+- [Angular Documentation: Data Binding](https://angular.dev/guide/concept-intro)
+- [Angular Documentation: Dependency Injection](https://angular.dev/guide/di)
+- [Angular Documentation: Signals](https://angular.dev/guide/signals)

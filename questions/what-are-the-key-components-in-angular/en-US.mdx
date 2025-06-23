@@ -1,0 +1,226 @@
+---
+title: What are the key components in Angular?
+---
+
+## TL;DR
+
+The key components in an Angular application are:
+
+- **Modules (`NgModule`)**: These organize your application into cohesive blocks of functionality. Every Angular app has at least one root module, typically `AppModule`. Modules declare which components, directives, and pipes belong to them and make services available.
+- **Components (`@Component`)**: These are the fundamental building blocks of the user interface. Each component controls a patch of the screen and consists of a TypeScript class with application logic, an HTML template that defines the view, and CSS styles.
+- **Templates**: Written in HTML, templates define the structure and layout of a component's view. They use Angular's template syntax for data binding and directives.
+- **Metadata**: This tells Angular how to process a class. It's attached using decorators like `@Component`, `@NgModule`, and `@Injectable`. Metadata configures the class, linking a component class to its template and styles, or defining a module's imports and declarations.
+- **Data Binding**: This is the communication mechanism between a component's class and its template. It allows data to flow from the class to the template (interpolation, property binding) and from the template to the class (event binding), as well as two-way binding.
+- **Directives (`@Directive`)**: These are classes that modify the DOM. Components are a special type of directive with a template. Other directives like `NgIf` and `NgFor` change the structure of the DOM, while attribute directives change the appearance or behavior of an element.
+- **Services (`@Injectable`)**: These are classes that contain reusable logic or data. They are typically used for tasks like fetching data, logging, or providing shared state. Services are designed to be injected into components or other services using Dependency Injection.
+- **Dependency Injection (DI)**: This is a core design pattern used by Angular to provide instances of dependencies (like services) to classes that need them, rather than the classes creating the dependencies themselves. This makes components and services easier to test and manage.
+
+---
+
+## Key components in Angular
+
+Angular applications are built using several fundamental concepts and building blocks that work together. Understanding these key components is essential to developing Angular applications.
+
+### Modules (`NgModule`)
+
+Angular applications are modular. Modules are containers for a cohesive block of functionality. They define which components, directives, and pipes belong to the module and make services available to other parts of the application.
+
+- Every Angular application has at least one root module, conventionally named `AppModule`, which bootstraps the application
+- Applications can have multiple feature modules to organize code by domain, feature, or purpose (e.g., `AdminModule`, `ProductsModule`)
+- Modules are defined using the `@NgModule` decorator, which takes a metadata object configuring the module
+
+```typescript
+import { NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+import { AppComponent } from './app.component';
+import { MyFeatureComponent } from './my-feature/my-feature.component';
+
+@NgModule({
+  declarations: [
+    // Components, directives, and pipes belonging to this module
+    AppComponent,
+    MyFeatureComponent,
+  ],
+  imports: [
+    // Other modules whose exported classes are needed by component templates declared in this module
+    BrowserModule,
+  ],
+  providers: [
+    // Services available for injection within this module
+    // MyService
+  ],
+  bootstrap: [AppComponent], // The root component to bootstrap
+})
+export class AppModule {}
+```
+
+### Components (`@Component`)
+
+Components are the most fundamental building blocks of an Angular application's user interface. They control a specific part of the screen, or view.
+
+- Each component consists of a TypeScript class with the component's logic, an HTML template that defines the view, and CSS styles that define the component's appearance
+- Components are defined using the `@Component` decorator, which links the class to its template and styles and defines its selector (how it's used in HTML)
+
+```typescript
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-my-component', // How to use this component in HTML: <app-my-component></app-my-component>
+  templateUrl: './my-component.component.html', // Path to the HTML template
+  styleUrls: ['./my-component.component.css'], // Path(s) to CSS style files
+})
+export class MyComponent {
+  title = 'Hello, Angular!'; // Component logic (property)
+
+  // Component logic (method)
+  greet() {
+    alert(this.title);
+  }
+}
+```
+
+### Templates
+
+Templates are written in HTML and define the structure and layout of a component's view. Angular extends standard HTML with its own template syntax, allowing for dynamic content and behavior.
+
+- Templates are associated with a component via the `templateUrl` or `template` property in the `@Component` decorator
+- They use Angular's template syntax for data binding (interpolation, property binding, event binding, two-way binding) and directives (`*ngIf`, `*ngFor`, `[ngClass]`, etc.)
+
+```html
+<!-- my-component.component.html -->
+<div>
+  <h1>{{ title }}</h1>
+  <!-- Interpolation -->
+  <button (click)="greet()">Click Me</button>
+  <!-- Event binding -->
+</div>
+```
+
+### Metadata
+
+Metadata tells Angular how to process a class. It is attached to classes using decorators (e.g., `@Component`, `@NgModule`, `@Injectable`).
+
+- Metadata provides configuration information that Angular uses to understand how a class should be used
+- For a component, metadata specifies its template, styles, and selector
+- For a module, metadata specifies its declarations, imports, providers, and bootstrap component
+- For a service, metadata (like `@Injectable`) indicates that the class can be injected
+
+```typescript
+// Example of metadata using decorators
+@Component({...}) // Component metadata
+export class MyComponent {}
+
+@NgModule({...}) // Module metadata
+export class AppModule {}
+
+@Injectable({...}) // Service metadata
+export class MyService {}
+```
+
+### Data Binding
+
+Data binding is the mechanism that allows communication between a component's class and its template. It synchronizes data between the component logic and the view.
+
+- **Interpolation (`{{ ... }}`)**: Displays a component property value in the template
+- **Property Binding (`[property]="data"`)**: Binds a component property value to an HTML element property
+- **Event Binding (`(event)="handler()"`)**: Listens for events in the template (like button clicks) and executes a component method
+- **Two-Way Binding (`[(ngModel)]="data"`)**: Combines property and event binding to allow data to flow both ways (requires `FormsModule`)
+
+```html
+<!-- Example data binding in a template -->
+<p>{{ message }}</p>
+<!-- Interpolation -->
+<img [src]="imageUrl" />
+<!-- Property binding -->
+<button (click)="onClick()">Click</button>
+<!-- Event binding -->
+<input [(ngModel)]="userName" />
+<!-- Two-way binding -->
+```
+
+### Directives (`@Directive`)
+
+Directives are classes that modify the structure, appearance, or behavior of DOM elements. Components are technically a special type of directive that always have a template.
+
+- **Component Directives**: Directives with a template (the most common type)
+- **Structural Directives**: Change the DOM layout by adding, removing, or manipulating elements (e.g., `*ngIf`, `*ngFor`, `*ngSwitchCase`)
+- **Attribute Directives**: Change the appearance or behavior of an element, component, or another directive (e.g., `[ngClass]`, `[ngStyle]`, `ngModel`)
+
+```html
+<!-- Examples of built-in directives -->
+<p *ngIf="isVisible">This paragraph is visible.</p>
+<!-- Structural directive -->
+<ul>
+  <li *ngFor="let item of items">{{ item }}</li>
+  <!-- Structural directive -->
+</ul>
+<div [ngClass]="{'active': isActive}">Styled div</div>
+<!-- Attribute directive -->
+```
+
+### Services (`@Injectable`)
+
+Services are classes that encapsulate reusable logic or data. They are typically used for tasks that don't involve the UI, such as fetching data from a server, logging, or providing shared state.
+
+- Services are designed to be injected into components or other services using Dependency Injection
+- They are often marked with the `@Injectable` decorator, especially if they have their own dependencies
+
+```typescript
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+
+@Injectable({
+  providedIn: 'root', // Makes the service a singleton available throughout the app
+})
+export class DataService {
+  constructor(private http: HttpClient) {}
+
+  getData(): Observable<any> {
+    return this.http.get('/api/data');
+  }
+}
+```
+
+### Dependency Injection (DI)
+
+Dependency Injection is a design pattern where a class requests dependencies from external sources rather than creating them itself. Angular uses DI extensively to provide instances of services to components and other services.
+
+- The Angular injector system manages the creation and provision of dependencies
+- Dependencies are typically requested in the constructor of a class
+- The `@Injectable` decorator and the `providers` array in `@NgModule` or `@Component` metadata configure the injector
+
+```typescript
+import { Component } from '@angular/core';
+import { DataService } from './data.service'; // Import the service
+
+@Component({
+  selector: 'app-my-component',
+  templateUrl: './my-component.component.html',
+  // providers: [DataService] // Can also provide at component level
+})
+export class MyComponent {
+  data: any;
+
+  // Inject DataService in the constructor
+  constructor(private dataService: DataService) {}
+
+  ngOnInit() {
+    this.dataService.getData().subscribe(result => {
+      this.data = result;
+    });
+  }
+}
+```
+
+These core components work together to form the structure and behavior of an Angular application, promoting modularity, maintainability, and testability.
+
+## Further reading
+
+- [Angular Documentation: Architecture Overview](https://angular.dev/guide/architecture)
+- [Angular Documentation: NgModules](https://angular.dev/guide/ngmodules)
+- [Angular Documentation: Components](https://angular.dev/guide/components)
+- [Angular Documentation: Templates](https://angular.dev/guide/templates)
+- [Angular Documentation: Data Binding](https://angular.dev/guide/binding)
+- [Angular Documentation: Directives](https://angular.dev/guide/directives)
+- [Angular Documentation: Services and Dependency Injection](https://angular.dev/guide/di)

@@ -1,0 +1,150 @@
+---
+title: What is lazy loading and how do you use it in Angular?
+---
+
+## TL;DR
+
+Lazy loading in Angular is a technique used to load parts of your application code only when they are needed, typically when a user navigates to a specific route. Instead of loading the entire application bundle upfront, lazy loading splits the application into smaller bundles and loads them on demand.
+
+The primary benefit is significantly improving the application's initial load time because the browser only downloads the code required for the initial view.
+
+You implement lazy loading in Angular primarily through the router configuration. Instead of importing and directly referencing a module in your route definition, you use the `loadChildren` property with a dynamic import:
+
+```typescript
+const routes: Routes = [
+  {
+    path: 'admin',
+    loadChildren: () => import('./admin/admin.module').then(m => m.AdminModule),
+  },
+];
+```
+
+This tells the router to fetch and load the `AdminModule` and its associated components and services only when the user navigates to the `/admin` path.
+
+---
+
+## What is lazy loading?
+
+Lazy loading is a design pattern used in web development where resources, such as code, images, or data, are loaded only when they are actually required, rather than loading everything upfront when the application starts. This contrasts with eager loading, where all resources are loaded immediately.
+
+In the context of single-page applications (SPAs) like those built with Angular, lazy loading typically refers to loading JavaScript code bundles for specific features or routes only when a user navigates to those parts of the application.
+
+## Why use lazy loading in Angular?
+
+Angular applications, especially large ones, can grow significantly in size as more features, components, and libraries are added. Without lazy loading, the entire application's code is bundled into a few large files that must be downloaded by the browser before the application can fully start and display content. This can lead to:
+
+### Slower initial load times
+
+Users might experience a blank screen or a loading spinner for a longer period while the browser downloads and parses the large JavaScript bundles.
+
+### Increased bandwidth usage
+
+Users download code for parts of the application they might never visit during their session.
+
+### Higher memory consumption
+
+Loading and parsing large amounts of JavaScript can consume significant browser memory.
+
+Lazy loading addresses these issues by splitting the application into smaller, manageable bundles. The initial load only includes the code necessary for the application's entry point (e.g., the landing page). Code for other features is downloaded asynchronously only when the user navigates to a route associated with that feature. This results in a much faster initial load time and a better user experience.
+
+## How to implement lazy loading in Angular
+
+Lazy loading in Angular is most commonly implemented at the module level using the Angular Router. You define routes that, instead of loading a component directly or loading a module eagerly, use the `loadChildren` property to dynamically import a module.
+
+### Using `loadChildren` with modules
+
+The standard way to set up lazy loading involves creating a separate Angular module for the feature you want to lazy load. This module will contain the components, services, and routing specific to that feature.
+
+In your main application's routing configuration (e.g., `app-routing.module.ts`), you define a route path and use `loadChildren` to point to the feature module file. The syntax uses a dynamic `import()` statement, which is a standard JavaScript feature supported by modern browsers and build tools.
+
+```typescript
+// app-routing.module.ts
+import { NgModule } from '@angular/core';
+import { RouterModule, Routes } from '@angular/router';
+
+const routes: Routes = [
+  { path: '', redirectTo: '/home', pathMatch: 'full' },
+  {
+    path: 'home',
+    // Assuming you have a HomeModule that is eagerly loaded or part of the main bundle
+    loadChildren: () => import('./home/home.module').then(m => m.HomeModule),
+    // Or if HomeModule is eagerly loaded: component: HomeComponent
+  },
+  {
+    path: 'admin',
+    // Lazy load the AdminModule when the user navigates to '/admin'
+    loadChildren: () => import('./admin/admin.module').then(m => m.AdminModule),
+  },
+  {
+    path: 'dashboard',
+    // Lazy load the DashboardModule when the user navigates to '/dashboard'
+    loadChildren: () =>
+      import('./dashboard/dashboard.module').then(m => m.DashboardModule),
+  },
+  // Wildcard route for 404 page (often eagerly loaded)
+  { path: '**', component: PageNotFoundComponent },
+];
+
+@NgModule({
+  imports: [RouterModule.forRoot(routes)],
+  exports: [RouterModule],
+})
+export class AppRoutingModule {}
+```
+
+When the router matches the path `'admin'`, it uses the dynamic `import('./admin/admin.module')` to load the JavaScript bundle containing the `AdminModule`. Once loaded, it resolves the promise and extracts the `AdminModule` class (`.then(m => m.AdminModule)`), which the router then uses to configure its routes.
+
+### Lazy loading with standalone components (Available from Angular 14 onwards)
+
+With the introduction of standalone components, modules are no longer strictly necessary for lazy loading. You can lazy load individual standalone components directly in your routing configuration using the `loadComponent` property.
+
+```typescript
+// app-routing.module.ts
+import { NgModule } from '@angular/core';
+import { RouterModule, Routes } from '@angular/router';
+
+const routes: Routes = [
+  { path: '', redirectTo: '/home', pathMatch: 'full' },
+  {
+    path: 'home',
+    // Assuming HomeComponent is a standalone component
+    loadComponent: () =>
+      import('./home/home.component').then(c => c.HomeComponent),
+  },
+  {
+    path: 'admin',
+    // Lazy load the AdminComponent (standalone) when the user navigates to '/admin'
+    loadComponent: () =>
+      import('./admin/admin.component').then(c => c.AdminComponent),
+  },
+  // Wildcard route for 404 page
+  { path: '**', component: PageNotFoundComponent },
+];
+
+@NgModule({
+  imports: [RouterModule.forRoot(routes)],
+  exports: [RouterModule],
+})
+export class AppRoutingModule {}
+```
+
+This approach simplifies the structure by removing the need for a dedicated feature module just for routing purposes when using standalone components.
+
+## Benefits of lazy loading
+
+- **Faster initial load time:** Reduces the size of the initial JavaScript bundle that the browser needs to download and parse.
+- **Reduced resource consumption:** Saves bandwidth and potentially memory by only loading code that is needed.
+- **Improved user experience:** Users can start interacting with the application sooner.
+- **Better organization:** Encourages structuring the application into distinct feature modules or component groups.
+
+## Considerations
+
+While lazy loading offers significant performance benefits, it's important to note that there might be a slight delay the _first_ time a user navigates to a lazy-loaded route, as the browser needs to download the corresponding bundle. Subsequent visits to the same route within the same session will likely be faster as the bundle might be cached.
+
+Angular provides preloading strategies (`PreloadAllModules`, `NoPreloading`, or custom strategies) that can mitigate this delay by loading lazy bundles in the background after the initial application load.
+
+## Further reading
+
+- [Angular Documentation: Lazy-loading feature modules](https://angular.dev/guide/lazy-loading)
+- [Angular Documentation: Lazy loading with standalone components](https://angular.dev/guide/components/standalone#lazy-loading-standalone-components)
+- [Angular Documentation: Preloading](https://angular.dev/guide/routing/common-router-tasks#preloading-components)

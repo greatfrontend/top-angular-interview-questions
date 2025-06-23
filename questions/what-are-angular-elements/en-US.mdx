@@ -1,0 +1,112 @@
+---
+title: What are Angular elements?
+---
+
+## TL;DR
+
+Angular Elements are Angular components packaged as custom elements, which are part of the Web Components standard. This allows you to use your Angular components in any HTML environment, whether it's a plain HTML page, a different framework like React or Vue, or even another Angular application.
+
+They work by using the `createCustomElement` function from the `@angular/elements` package to convert an Angular component class into a standard HTML custom element class. You then register this class with the browser's `customElements.define()` API, giving it a custom tag name (like `<my-angular-element>`).
+
+Inputs to the Angular component become attributes on the custom element, and outputs become custom DOM events dispatched by the element. This makes your Angular components interoperable and reusable outside the typical Angular application shell.
+
+---
+
+## What are Angular elements
+
+Angular Elements are Angular components that are registered as custom elements using the browser's native Web Components APIs. This process allows you to take the encapsulated logic and UI of an Angular component and make it available for use in any HTML environment, not just within a full Angular application.
+
+Essentially, an Angular Element is an Angular component that the browser treats as a standard HTML element. You can place it directly in your HTML markup using a custom tag name you define, and the browser will instantiate and manage it.
+
+## Why use Angular elements
+
+Using Angular Elements provides several key benefits, primarily centered around reusability and interoperability:
+
+### Reusing components outside Angular
+
+The primary use case is sharing Angular components with applications built using different technologies (like React, Vue, jQuery, or even plain JavaScript/HTML). Instead of rewriting a complex component, you can package it as an Angular Element and drop it into the other application.
+
+### Integrating into existing applications
+
+If you have a large, non-Angular application and want to gradually introduce Angular or use specific Angular components without rewriting the entire application, Angular Elements provide a way to embed these components seamlessly.
+
+### Leveraging web standards
+
+Angular Elements are built on top of the Web Components standard (`customElements`, `Shadow DOM`, `HTML templates`), ensuring they work natively in modern browsers and adhere to open standards.
+
+### Encapsulation
+
+Like standard Angular components, Angular Elements can leverage the Shadow DOM for style and DOM encapsulation, preventing styles from leaking in or out of the component.
+
+## How Angular elements work
+
+The process of creating and using an Angular Element involves a few steps:
+
+### Creating an Angular component
+
+You start with a standard Angular component, defined with `@Component`, a template, and associated logic.
+
+```typescript
+import { Component, Input, Output, EventEmitter } from '@angular/core';
+
+@Component({
+  selector: 'app-hello-world',
+  template: `
+    <p>Hello, {{ name }}!</p>
+    <button (click)="greet.emit('Hello from ' + name)">Greet</button>
+  `,
+  styles: ['p { color: blue; }'],
+})
+export class HelloWorldComponent {
+  @Input() name = 'World';
+  @Output() greet = new EventEmitter<string>();
+}
+```
+
+### Converting the component to a custom element class
+
+You use the `createCustomElement` function provided by the `@angular/elements` package. This function takes your Angular component class and the Angular `Injector` and returns a constructor that can be used to create instances of the custom element.
+
+```typescript
+import { createCustomElement } from '@angular/elements';
+import { HelloWorldComponent } from './hello-world.component';
+import { Injector } from '@angular/core';
+
+// In your application's module or main file
+export class AppModule {
+  constructor(private injector: Injector) {}
+
+  ngDoBootstrap() {
+    // Convert the component to a custom element class
+    const el = createCustomElement(HelloWorldComponent, {
+      injector: this.injector,
+    });
+
+    // Define the custom element with the browser
+    customElements.define('my-hello-world', el);
+  }
+}
+```
+
+_Note: For standalone components (available from Angular 14 onwards), you don't need a module. You can get the injector from `ApplicationRef` after bootstrapping._
+
+### Registering the custom element
+
+You register the custom element class with the browser's `customElements.define()` API. This associates a specific tag name (e.g., `'my-hello-world'`) with the custom element class. Once defined, the browser knows how to create and manage elements with that tag.
+
+### Mapping inputs and outputs
+
+Angular automatically maps the component's `@Input()` properties to attributes on the custom element. When an attribute changes, the corresponding input property is updated. Similarly, `@Output()` event emitters are mapped to custom DOM events that are dispatched by the custom element.
+
+For example, if you have `<my-hello-world name="Angular"></my-hello-world>`, the `name` input of the `HelloWorldComponent` instance inside the element will be set to `'Angular'`. If the component emits the `greet` event, the custom element will dispatch a `greet` custom event that you can listen to using standard DOM event listeners (`element.addEventListener('greet', ...)`) or HTML attributes (`<my-hello-world (greet)="handleGreet($event)"></my-hello-world>` if used within another Angular app).
+
+## Considerations
+
+- **Bundle Size:** Packaging Angular components includes the Angular runtime, which can result in a larger JavaScript bundle compared to native Web Components or components from smaller frameworks.
+- **Zone.js:** By default, Angular Elements rely on Zone.js for change detection. While it's possible to build Angular Elements without Zone.js (available from Angular 11 onwards), it requires careful consideration of how change detection is triggered.
+- **Change Detection:** Change detection within an Angular Element is typically triggered by attribute changes (mapped to inputs) or DOM events originating from within the element.
+
+## Further reading
+
+- [Angular Documentation on Angular Elements](https://angular.dev/guide/elements)
+- [Web Components Documentation (MDN)](https://developer.mozilla.org/en-US/docs/Web/Web_Components)

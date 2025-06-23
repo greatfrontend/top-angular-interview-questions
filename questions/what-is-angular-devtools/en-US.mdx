@@ -1,0 +1,54 @@
+---
+title: What is Angular DevTools and how can it help during development?
+---
+
+## TL;DR
+
+Angular DevTools is a browser extension available for Chrome, Edge, and Firefox that provides debugging and performance profiling capabilities specifically for Angular applications. It helps developers understand the structure of their application by visualizing the component tree, inspect and modify the state of components and directives, and analyze the performance of change detection cycles to identify bottlenecks. It's an essential tool for debugging complex Angular applications and optimizing their runtime performance.
+
+---
+
+## What is Angular DevTools
+
+Angular DevTools is a browser extension designed to assist developers in debugging and profiling Angular applications directly within the browser's developer tools. It provides a dedicated panel that offers insights into the structure and behavior of an Angular application running in the browser.
+
+It is available as an extension for popular browsers like Google Chrome, Microsoft Edge, and Mozilla Firefox. Once installed and enabled, it appears as a new tab within the browser's developer tools panel when you are inspecting a page running an Angular application.
+
+## How it helps during development
+
+Angular DevTools provides several key features that significantly aid in the development and debugging process:
+
+### Inspecting the component tree
+
+It displays a visual representation of the component hierarchy of your application. You can see the nested structure of components and directives, making it easier to understand how different parts of your UI are composed. Selecting a component in the tree allows you to inspect its details.
+
+### Inspecting and modifying component state
+
+When you select a component or directive in the tree view, the DevTools panel shows its properties, inputs, outputs, and other internal state. You can view the current values of these properties and, in many cases, even modify them directly within the DevTools. This allows for quick testing of different states without needing to change and recompile your code.
+
+### Profiling application performance
+
+The DevTools includes a Profiler tab that helps analyze the performance of your application, particularly focusing on change detection cycles. You can record performance sessions to see how long change detection takes for different components and identify which components are being checked and how frequently. This is crucial for finding performance bottlenecks and optimizing rendering speed.
+
+### Debugging change detection
+
+By profiling change detection, you can understand why certain parts of your application are re-rendering. The profiler shows the sequence of change detection runs and highlights components involved, helping you pinpoint unnecessary checks or complex calculations that slow down the UI.
+
+### Locating components in the source code
+
+From the component tree view, you can often jump directly to the source code file where a selected component is defined, speeding up the process of finding and editing component logic.
+
+### Understanding directive application
+
+Besides components, the DevTools also shows directives applied to elements, allowing you to inspect their properties and understand their effect on the DOM element.
+
+## Installation and access
+
+Angular DevTools is installed as a standard browser extension from the respective browser's web store (Chrome Web Store, Edge Add-ons, Firefox Add-ons). Once installed, open the developer tools (usually by pressing F12 or right-clicking and selecting "Inspect") on a page running an Angular application. A new tab labeled "Angular" (or similar) will appear, providing access to the DevTools features.
+
+## Further reading
+
+- [Angular DevTools Guide](https://angular.io/guide/devtools)
+- [Angular DevTools Chrome Web Store](https://chrome.google.com/webstore/detail/angular-devtools/ienajhtopmahnkenfcfapbdbmjkkdmmo)
+- [Angular DevTools Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/angular-devtools/)
+- [Angular DevTools Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/angular-devtools/olbndgnkpfhmdmganhjpkklhgbjkaalj)

@@ -1,0 +1,132 @@
+---
+title: What is metadata or annotation?
+---
+
+## TL;DR
+
+In Angular, metadata or annotations are used to configure classes, telling Angular how they should be processed, used, or behave. They are attached to classes using decorators, which are special functions prefixed with the `@` symbol.
+
+For example:
+
+- The `@Component` decorator adds metadata to a class, specifying its selector, template, styles, etc.
+- The `@Injectable` decorator adds metadata, indicating that a class can be injected as a dependency.
+- The `@NgModule` decorator adds metadata to configure a module, listing its declarations, imports, providers, and bootstrap components.
+
+This metadata is crucial for Angular's compiler and runtime to understand the structure and dependencies of your application.
+
+---
+
+## What is metadata or annotation in Angular?
+
+In the context of Angular, metadata (often referred to interchangeably with annotations, though technically annotations are a form of metadata) is data that configures a class, telling Angular how to treat it. It provides information _about_ the class itself, rather than being part of the class's core logic.
+
+Angular uses metadata extensively to understand the different parts of your application, such as components, services, modules, and directives. This metadata is attached to classes using decorators.
+
+## Decorators: The syntax for applying metadata
+
+Decorators are a language feature (supported by TypeScript and a stage 3 proposal in JavaScript) that provide a declarative way to add annotations and a meta-programming syntax for class declarations and members. In Angular, decorators are used to attach metadata to classes, properties, methods, or parameters.
+
+A decorator is denoted by the `@` symbol followed by the decorator function name. When applied to a class, it typically looks like this:
+
+```typescript
+@DecoratorName({
+  // Metadata configuration object
+  property1: value1,
+  property2: value2,
+})
+class MyClass {
+  // Class definition
+}
+```
+
+## Common Angular decorators and their metadata
+
+Angular provides several built-in decorators to define the type and configuration of different parts of your application:
+
+### `@Component`
+
+This decorator marks a class as an Angular component. The metadata provided configures how the component should be rendered and behave.
+
+```typescript
+@Component({
+  selector: 'app-my-component', // How to use the component in templates
+  templateUrl: './my-component.html', // The component's HTML template
+  styleUrls: ['./my-component.css'], // Styles for the component
+})
+export class MyComponent {
+  // Component logic
+}
+```
+
+### `@Injectable`
+
+This decorator marks a class as a service that can be injected into other classes. The metadata often includes configuration for how the service should be provided.
+
+```typescript
+@Injectable({
+  providedIn: 'root', // Makes the service available application-wide
+})
+export class MyService {
+  // Service logic
+}
+```
+
+Available from Angular 6 onwards, the `providedIn` property is the preferred way to register services.
+
+### `@NgModule`
+
+This decorator marks a class as an Angular module. The metadata configures the module, declaring which components, directives, and pipes belong to it, which modules it depends on, which services it provides, and which component should be bootstrapped (for the root module).
+
+```typescript
+@NgModule({
+  declarations: [
+    // Components, directives, and pipes belonging to this module
+    MyComponent,
+    AnotherComponent,
+  ],
+  imports: [
+    // Other modules this module needs
+    BrowserModule,
+    FormsModule,
+  ],
+  providers: [
+    // Services provided by this module
+    MyService,
+  ],
+  bootstrap: [AppComponent], // The root component to start the application (only in the root module)
+})
+export class AppModule {}
+```
+
+### Other decorators
+
+Angular also uses decorators like `@Directive`, `@Pipe`, `@Input`, `@Output`, `@ViewChild`, `@ContentChild`, etc., each adding specific metadata to configure different aspects of components, directives, properties, or query results.
+
+## Why Angular uses metadata
+
+Angular relies heavily on metadata for several key reasons:
+
+### Declarative configuration
+
+Metadata allows you to declare the purpose and configuration of a class directly on the class itself, making the code more readable and understandable. You declare _what_ a class is (a component, a service) and _how_ it should be used (its selector, its dependencies).
+
+### Compilation
+
+The Angular compiler reads the metadata to understand the structure of your application, perform optimizations, and generate efficient code (like compiling templates into JavaScript).
+
+### Dependency injection
+
+Metadata, particularly from `@Injectable`, tells Angular's dependency injection system how to create and provide instances of services and other dependencies.
+
+### Framework integration
+
+Metadata is how you hook your custom classes into the Angular framework's lifecycle and features. For example, `@Component` tells Angular how to manage the component's lifecycle, change detection, and rendering.
+
+In essence, metadata is the bridge between your application code and the Angular framework, providing the necessary configuration for Angular to build, manage, and run your application.
+
+## Further reading
+
+- [Angular Documentation: Decorators](https://angular.dev/guide/decorators)
+- [Angular Documentation: Components](https://angular.dev/guide/components)
+- [Angular Documentation: Dependency Injection](https://angular.dev/guide/di)
+- [Angular Documentation: NgModules](https://angular.dev/guide/ngmodules)

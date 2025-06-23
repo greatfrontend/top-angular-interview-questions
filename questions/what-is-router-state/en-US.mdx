@@ -1,0 +1,185 @@
+---
+title: What is the router state?
+---
+
+## TL;DR
+
+The router state in Angular is a snapshot of the router's tree of activated routes at a specific point in time. It represents the current state of the application's navigation.
+
+Each node in this tree is an `ActivatedRoute` instance, which holds information about a segment of the URL associated with a loaded component. This information includes:
+
+- Route parameters (`params`)
+- Query parameters (`queryParams`)
+- Static and resolved data (`data`)
+- The URL segments (`url`)
+- The URL fragment (`fragment`)
+- References to parent and child routes (`parent`, `children`)
+
+You typically access the router state by injecting the `ActivatedRoute` service into a component to get information about the route that activated _that specific component_. You can also access the entire state tree via the `routerState` property of the `Router` service.
+
+It's crucial for tasks like fetching data based on route parameters, displaying content conditionally, or understanding the current navigation context.
+
+---
+
+## What is the router state?
+
+The router state in Angular is a representation of the current state of the router. It's essentially a tree structure where each node corresponds to an `ActivatedRoute` instance. This tree mirrors the structure of the URL and the components that are currently loaded and active in the router outlets.
+
+Think of it as a snapshot of the navigation context at a given moment. It tells you which routes are active, what parameters they have, what data is associated with them, and how they relate to each other in the navigation hierarchy.
+
+## What information does the router state contain?
+
+Each node in the router state tree is an `ActivatedRoute` object. This object provides access to various pieces of information related to the specific route segment it represents:
+
+### URL segments
+
+The `url` property is an observable that provides an array of `UrlSegment` objects. Each `UrlSegment` represents a part of the URL path associated with this route.
+
+### Route parameters
+
+The `params` property is an observable that provides an object containing the route parameters extracted from the URL path (e.g., `:id` in `/users/:id`).
+
+### Query parameters
+
+The `queryParams` property is an observable that provides an object containing the query parameters from the URL (e.g., `?page=1&sort=asc`).
+
+### Fragment
+
+The `fragment` property is an observable that provides the URL fragment (the part after the `#`).
+
+### Data
+
+The `data` property is an observable that provides an object containing static data defined in the route configuration and resolved data from route resolvers.
+
+### Outlet
+
+The `outlet` property is a string indicating the name of the router outlet where the component for this route is loaded (e.g., `'primary'` or a named outlet).
+
+### Component
+
+The `component` property holds a reference to the component type associated with this route.
+
+### Route configuration
+
+The `routeConfig` property holds the raw route configuration object that was used to create this `ActivatedRoute`.
+
+### Parent and children
+
+The `parent` property references the parent `ActivatedRoute` in the tree, and the `children` property is an array of child `ActivatedRoute` instances. This allows traversing the entire state tree.
+
+### Snapshot
+
+The `snapshot` property provides an immutable snapshot of the `ActivatedRoute` at a specific point in time. This is useful when you only need the current value and don't need to react to changes via observables. The `snapshot` itself also has `params`, `queryParams`, `data`, `url`, etc., but as properties holding the current value, not observables.
+
+## How to access the router state?
+
+There are two primary ways to access the router state:
+
+### Injecting `ActivatedRoute`
+
+This is the most common way. You inject `ActivatedRoute` into a component to get information about the specific route that _activated that component_.
+
+```typescript
+import { Component } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import { map } from 'rxjs/operators';
+
+@Component({
+  selector: 'app-user-detail',
+  template: `
+    <h2>User Detail</h2>
+    <p>User ID: {{ userId$ | async }}</p>
+    <p>Query Param 'sort': {{ sortParam$ | async }}</p>
+  `,
+})
+export class UserDetailComponent {
+  userId$ = this.route.params.pipe(map(params => params['id']));
+  sortParam$ = this.route.queryParams.pipe(map(params => params['sort']));
+
+  constructor(private route: ActivatedRoute) {
+    // Accessing snapshot data
+    const idSnapshot = this.route.snapshot.params['id'];
+    console.log('User ID from snapshot:', idSnapshot);
+  }
+}
+```
+
+In this example, `this.route` is an instance of `ActivatedRoute` specific to the route that loaded `UserDetailComponent`.
+
+### Accessing `Router.routerState`
+
+You can inject the `Router` service and access its `routerState` property. This gives you the root `ActivatedRoute` of the entire state tree, from which you can traverse down to any active route.
+
+```typescript
+import { Component } from '@angular/core';
+import { Router, ActivatedRouteSnapshot } from '@angular/router';
+
+@Component({
+  selector: 'app-root-info',
+  template: ` <p>Current URL: {{ currentUrl }}</p> `,
+})
+export class RootInfoComponent {
+  currentUrl: string = '';
+
+  constructor(private router: Router) {
+    // Accessing the snapshot of the root of the router state tree
+    const root: ActivatedRouteSnapshot = this.router.routerState.snapshot.root;
+
+    // You can traverse the tree from here
+    // For example, getting the full URL path segments
+    const urlSegments = this.getUrlSegments(root);
+    this.currentUrl = '/' + urlSegments.join('/');
+
+    console.log(
+      'Full router state snapshot:',
+      this.router.routerState.snapshot
+    );
+  }
+
+  private getUrlSegments(route: ActivatedRouteSnapshot): string[] {
+    let segments: string[] = [];
+    segments = segments.concat(route.url.map(segment => segment.path));
+    route.children.forEach(child => {
+      segments = segments.concat(this.getUrlSegments(child));
+    });
+    return segments;
+  }
+}
+```
+
+This approach is less common for accessing parameters specific to a component's own route but is useful for services or components that need to understand the overall navigation context or inspect parts of the state tree not directly related to their own activation.
+
+## Why is the router state useful?
+
+The router state is fundamental to building dynamic, data-driven Angular applications with routing. Its usefulness stems from providing context about the current navigation:
+
+### Accessing route parameters
+
+Essential for fetching specific resources (e.g., loading a user profile based on a user ID in the URL).
+
+### Reading query parameters
+
+Useful for filtering lists, pagination, sorting, or passing non-hierarchical state via the URL.
+
+### Utilizing route data
+
+Allows passing static configuration or pre-fetched data (via resolvers) to components, decoupling data fetching logic from the component itself.
+
+### Understanding the URL structure
+
+Provides the segments of the URL, which can be used for breadcrumbs, conditional rendering, or logging.
+
+### Navigating programmatically
+
+While not directly part of the state _access_, understanding the current state is often necessary before performing programmatic navigation (e.g., navigating to a child route or back to a parent).
+
+### Implementing route guards and resolvers
+
+Route guards and resolvers heavily rely on the `ActivatedRouteSnapshot` (part of the router state snapshot) and `RouterStateSnapshot` to make decisions about activation, deactivation, or data fetching.
+
+## Further reading
+
+- [Angular Documentation: RouterState](https://angular.dev/api/router/RouterState)
+- [Angular Documentation: ActivatedRoute](https://angular.dev/api/router/ActivatedRoute)
+- [Angular Documentation: RouterStateSnapshot](https://angular.dev/api/router/RouterStateSnapshot)
+- [Angular Documentation: ActivatedRouteSnapshot](https://angular.dev/api/router/ActivatedRouteSnapshot)

@@ -1,0 +1,98 @@
+---
+title: What is the wild card route?
+---
+
+## TL;DR
+
+The wildcard route in Angular, represented by the path `**`, is a special route that the Angular router uses as a fallback. It matches any URL that doesn't match any of the previously defined routes in your application's routing configuration. Its primary purpose is to handle unknown or invalid URLs, typically by redirecting the user to a 404 "Page Not Found" page or sometimes back to the application's home page. It must always be the _last_ route defined in your `routes` array so that the router checks all specific routes first before falling back to the wildcard.
+
+```typescript
+import { Routes } from '@angular/router';
+import { HomeComponent } from './home/home.component';
+import { AboutComponent } from './about/about.component';
+import { PageNotFoundComponent } from './page-not-found/page-not-found.component';
+
+const routes: Routes = [
+  { path: 'home', component: HomeComponent },
+  { path: 'about', component: AboutComponent },
+  // Wildcard route must be last
+  { path: '**', component: PageNotFoundComponent },
+];
+```
+
+---
+
+## What is the wildcard route?
+
+The wildcard route in Angular is a route configuration entry that uses the special path `**`. This path tells the Angular router to match _any_ URL segment sequence that hasn't been matched by any other route defined _before_ it in the routing configuration array.
+
+### Purpose of the wildcard route
+
+The main purpose of the wildcard route is to act as a catch-all mechanism. It handles situations where a user navigates to a URL within your application's base path that doesn't correspond to any valid, defined route. This is crucial for:
+
+- **Implementing a 404 "Page Not Found" page:** When a user types an incorrect URL or follows a broken link, the wildcard route can display a dedicated component informing them that the page doesn't exist.
+- **Redirecting unknown URLs:** Instead of showing a 404 page, you might choose to redirect users from any unknown URL back to the application's home page or another default route.
+
+### Defining the wildcard route
+
+You define the wildcard route like any other route object within your application's `routes` array, but using `**` as the `path`.
+
+```typescript
+import { Routes } from '@angular/router';
+import { HomeComponent } from './home/home.component';
+import { ProductsComponent } from './products/products.component';
+import { PageNotFoundComponent } from './page-not-found/page-not-found.component';
+
+const routes: Routes = [
+  { path: 'home', component: HomeComponent },
+  { path: 'products', component: ProductsComponent },
+  // ... other specific routes
+  { path: '**', component: PageNotFoundComponent }, // Wildcard route
+];
+```
+
+In this example, if a user navigates to `/home` or `/products`, the corresponding components are loaded. If they navigate to `/about` or `/non-existent-page`, the router won't find a match among the specific routes and will fall back to the `**` route, loading the `PageNotFoundComponent`.
+
+### Position matters
+
+It is critical that the wildcard route is the _last_ entry in your `routes` array. The Angular router processes routes sequentially from top to bottom. If the wildcard route were placed earlier, it would match _all_ URLs, including valid ones, preventing the more specific routes defined after it from ever being reached.
+
+```typescript
+import { Routes } from '@angular/router';
+import { HomeComponent } from './home/home.component';
+import { PageNotFoundComponent } from './page-not-found/page-not-found.component';
+import { AboutComponent } from './about/about.component'; // This route would be unreachable
+
+const routes: Routes = [
+  { path: 'home', component: HomeComponent },
+  { path: '**', component: PageNotFoundComponent }, // Incorrect position!
+  { path: 'about', component: AboutComponent }, // This route will never match
+];
+```
+
+In the incorrect example above, navigating to `/about` would match the `**` route instead of the `/about` route.
+
+### Redirecting with the wildcard route
+
+Instead of rendering a component directly, the wildcard route is often used to redirect. This is typically done to a 404 page route or the application's root path.
+
+```typescript
+import { Routes } from '@angular/router';
+import { HomeComponent } from './home/home.component';
+import { PageNotFoundComponent } from './page-not-found/page-not-found.component';
+
+const routes: Routes = [
+  { path: 'home', component: HomeComponent },
+  // Define a specific route for the 404 page
+  { path: '404', component: PageNotFoundComponent },
+  // Wildcard route redirects to the 404 page route
+  { path: '**', redirectTo: '/404' },
+];
+```
+
+In this configuration, any unmatched URL will redirect the user's browser to the `/404` path, which then loads the `PageNotFoundComponent`. Using `redirectTo` with `pathMatch: 'full'` is common for specific redirects, but for the wildcard `**`, `pathMatch` is not typically needed or used because `**` matches the entire remaining URL segment sequence by its nature.
+
+## Further reading
+
+- [Angular Router documentation - Wildcard route](https://angular.dev/guide/routing/common-router-tasks#wildcard-route)
+- [Angular `Routes` type definition](https://angular.dev/api/router/Routes)

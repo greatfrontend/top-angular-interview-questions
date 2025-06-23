@@ -1,0 +1,153 @@
+---
+title: What are router links and how are they used?
+---
+
+## TL;DR
+
+Router links, provided by the `routerLink` directive in Angular, are the primary way to enable navigation between different routes within your application using declarative syntax in your templates. Instead of using the standard HTML `href` attribute, which causes a full page reload, `routerLink` leverages Angular's Router to perform client-side navigation.
+
+You typically apply `routerLink` to an anchor (`<a>`) tag, but it can be used on any element.
+
+Here are common ways to use it:
+
+- **Static path:**
+  ```html
+  <a routerLink="/dashboard">Go to Dashboard</a>
+  ```
+- **Path with parameters:** Use an array syntax.
+  ```html
+  <a [routerLink]="['/products', productId]">View Product</a>
+  ```
+- **Path with query parameters and fragment:**
+  ```html
+  <a
+    [routerLink]="['/search']"
+    [queryParams]="{ category: 'electronics' }"
+    fragment="results"
+    >Search Electronics</a
+  >
+  ```
+
+Using `routerLink` ensures that Angular's routing mechanism handles the navigation, allowing for features like route guards, resolvers, and smooth transitions without a full page refresh.
+
+---
+
+## What are router links?
+
+Router links are a feature of the Angular Router, implemented as a directive called `routerLink`. They provide a declarative way to navigate between different routes defined in your Angular application directly from your templates.
+
+Unlike the standard HTML `href` attribute, which triggers a full browser page reload when clicked, the `routerLink` directive intercepts the click event and instructs Angular's Router to navigate to the specified path using the browser's History API. This results in a much faster and smoother user experience, as only the necessary components are loaded and rendered without losing the application's state.
+
+The `routerLink` directive is typically applied to an `<a>` element, but it can be used on any element that can trigger an event (like a `<div>` or `<button>`) if combined with an event listener that calls the router's `navigate` or `navigateByUrl` methods programmatically. However, using it on `<a>` tags is the most common and semantically correct approach for navigation links.
+
+## How to use router links
+
+The `routerLink` directive can accept various types of values to define the navigation path, including static strings, arrays for dynamic paths with parameters, and objects for query parameters and fragments.
+
+### Basic usage with a static path
+
+For simple, static paths, you can assign the path string directly to the `routerLink` attribute.
+
+```html
+<a routerLink="/home">Home</a> <a routerLink="/about-us">About Us</a>
+```
+
+The path should typically start with a leading slash (`/`) to indicate an absolute path from the application's root.
+
+### Usage with parameters
+
+When navigating to routes that require parameters (e.g., viewing a specific item by ID), you use an array syntax with property binding (`[]`). The array contains the path segments followed by the parameter values.
+
+```html
+<!-- Assuming productId is a component property -->
+<a [routerLink]="['/products', productId]">View Product Details</a>
+
+<!-- Example with multiple parameters -->
+<a [routerLink]="['/users', userId, 'edit']">Edit User</a>
+```
+
+In these examples, `productId` and `userId` are variables or properties in the component class that hold the actual values for the parameters.
+
+### Usage with query parameters and fragments
+
+You can include query parameters and URL fragments using the `queryParams` and `fragment` input properties, also with property binding.
+
+```html
+<!-- Navigate to /search?category=electronics -->
+<a [routerLink]="['/search']" [queryParams]="{ category: 'electronics' }"
+  >Search Electronics</a
+>
+
+<!-- Navigate to /article#section2 -->
+<a [routerLink]="['/article']" fragment="section2">Go to Section 2</a>
+
+<!-- Combine parameters, query params, and fragment -->
+<a
+  [routerLink]="['/items', itemId]"
+  [queryParams]="{ sort: 'price', filter: 'new' }"
+  fragment="details"
+  >View Item with Options</a
+>
+```
+
+The `queryParams` input takes an object where keys are query parameter names and values are their corresponding values. The `fragment` input takes a string.
+
+### Usage with relative paths
+
+By default, paths in `routerLink` are absolute (relative to the application root). You can specify relative navigation using the `relativeTo` input property, providing the `ActivatedRoute` of the current component.
+
+```typescript
+import { ActivatedRoute } from '@angular/router';
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-item-detail',
+  template: `
+    <h2>Item Detail</h2>
+    <!-- Navigates to /items/{{itemId}}/overview -->
+    <a [routerLink]="['overview']" [relativeTo]="route">Overview</a>
+    <!-- Navigates to /items/{{itemId}}/specs -->
+    <a [routerLink]="['specs']" [relativeTo]="route">Specifications</a>
+    <!-- Navigates to /items (up one level) -->
+    <a [routerLink]="['../']" [relativeTo]="route">Back to List</a>
+  `,
+})
+export class ItemDetailComponent {
+  itemId = 123; // Example item ID
+
+  constructor(private route: ActivatedRoute) {}
+}
+```
+
+The `relativeTo` property tells the router to resolve the `routerLink` path relative to the route that activated the component. Path segments like `'overview'`, `'specs'`, or `'../'` are then interpreted based on the current URL.
+
+### Usage with `routerLinkActive`
+
+The `routerLinkActive` directive is commonly used alongside `routerLink` to apply CSS classes to an element when its `routerLink` is the active route.
+
+```html
+<nav>
+  <a routerLink="/home" routerLinkActive="active">Home</a>
+  <a routerLink="/dashboard" routerLinkActive="active">Dashboard</a>
+</nav>
+```
+
+When the current URL matches `/home`, the class `active` will be added to the "Home" link. When the URL matches `/dashboard`, the class `active` will be added to the "Dashboard" link. You can specify multiple classes separated by spaces.
+
+## Why use router links instead of `href`?
+
+Using `routerLink` is the standard and recommended way to handle navigation within an Angular single-page application for several key reasons:
+
+- **Client-side navigation:** `routerLink` prevents the browser's default full page reload behavior. It uses the History API to change the URL and allows Angular's Router to swap components dynamically, providing a faster and more seamless user experience.
+- **Integration with Angular Router features:** Navigation via `routerLink` goes through the Angular Router's lifecycle. This means route guards (`CanActivate`, `CanLoad`, etc.) are checked, resolvers (`Resolve`) are run to fetch data before component activation, and route events are emitted, allowing you to react to navigation changes.
+- **State preservation:** Because the page doesn't fully reload, the application's state (e.g., service data, component state) is preserved across navigation, which is crucial for single-page applications.
+- **Active link styling:** The companion `routerLinkActive` directive makes it trivial to style the currently active navigation link, providing visual feedback to the user.
+- **Parameter handling:** `routerLink` provides a structured way to include route parameters, query parameters, and fragments directly in the template syntax.
+
+Using `href` for internal application links bypasses the Angular Router entirely, leading to full page reloads, loss of application state, and ignoring any route guards or resolvers you might have configured. Therefore, `href` should generally only be used for external links that navigate away from your Angular application.
+
+## Further reading
+
+- [Angular Documentation: RouterLink](https://angular.dev/guide/router/common-router-tasks#linking-to-routes)
+- [Angular Documentation: RouterLinkActive](https://angular.dev/guide/router/common-router-tasks#adding-a-css-class-to-active-links-routerlinkactive)
+- [Angular Documentation: Relative Navigation](https://angular.dev/guide/router/common-router-tasks#relative-navigation)

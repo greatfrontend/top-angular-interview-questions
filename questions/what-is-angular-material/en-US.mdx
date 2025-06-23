@@ -1,0 +1,109 @@
+---
+title: What is Angular Material?
+---
+
+## TL;DR
+
+Angular Material is a UI component library for Angular applications that implements Google's Material Design principles. Its main purpose is to provide a set of high-quality, pre-built, and accessible UI components like buttons, forms, navigation, data tables, and more.
+
+Using Angular Material helps developers:
+
+- Quickly build consistent and visually appealing user interfaces
+- Ensure accessibility compliance (ARIA, keyboard navigation)
+- Implement responsive designs easily
+- Apply consistent theming across the application
+
+You typically add it to your project using the Angular CLI command `ng add @angular/material`.
+
+---
+
+## What is Angular Material
+
+Angular Material is a user interface (UI) component library specifically designed for Angular applications. It provides a set of reusable UI components that adhere to Google's Material Design guidelines. Material Design is a comprehensive design system created by Google that provides guidance on visual, motion, and interaction design across platforms and devices.
+
+## Purpose of Angular Material
+
+The primary goal of Angular Material is to help developers build consistent, accessible, and high-quality user interfaces for their Angular applications more efficiently. By providing pre-built components, it reduces the need to build common UI elements from scratch, allowing developers to focus on the application's core logic.
+
+## Key Features and Benefits
+
+### Pre-built UI Components
+
+Angular Material offers a wide range of ready-to-use components covering common UI patterns. Examples include:
+
+- Buttons, checkboxes, radio buttons, sliders, input fields
+- Toolbars, side navigation (sidenav), menus
+- Cards, lists, grids
+- Tabs, steppers, expansion panels
+- Dialogs, snack bars, tooltips
+- Data tables, paginators, sort headers
+
+These components are built using standard HTML, CSS, and TypeScript, integrating seamlessly with Angular's architecture.
+
+### Adherence to Material Design
+
+The components are designed and styled according to the Material Design specification. This ensures a consistent look and feel across the application, following established principles for layout, typography, color, motion, and interaction.
+
+### Accessibility (a11y)
+
+A strong focus of Angular Material is accessibility. The components are built with accessibility in mind, incorporating features like:
+
+- Appropriate ARIA attributes
+- Keyboard navigation support
+- High contrast modes
+
+This helps ensure that applications built with Angular Material are usable by people with disabilities.
+
+### Theming Capabilities
+
+Angular Material provides a robust theming system. You can easily customize the color palette, typography, and density of the components to match your application's branding or design requirements. This is typically done by defining custom Sass themes.
+
+### Responsiveness
+
+Many components are designed to be responsive out-of-the-box or provide tools and layouts (like the grid system) to help you build responsive interfaces that adapt to different screen sizes and devices.
+
+### Seamless Integration with Angular
+
+Angular Material is built specifically for Angular and integrates smoothly with Angular features like data binding, forms, and the component lifecycle.
+
+## How to Use Angular Material
+
+You typically add Angular Material to an existing Angular project using the Angular CLI:
+
+```bash
+ng add @angular/material
+```
+
+This command installs the necessary packages, sets up the project for themes and typography, and optionally configures HammerJS for gesture support and browser animations.
+
+After installation, you import the specific modules for the components you want to use into your Angular modules (e.g., `AppModule` or a feature module):
+
+```typescript
+import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { NgModule } from '@angular/core';
+
+@NgModule({
+  imports: [
+    MatButtonModule,
+    MatCardModule,
+    // ... other modules
+  ],
+  // ...
+})
+export class AppModule {}
+```
+
+Then you can use the components in your templates:
+
+```html
+<button mat-button color="primary">Click Me</button>
+<mat-card>
+  <mat-card-content> This is a card. </mat-card-content>
+</mat-card>
+```
+
+## Further reading
+
+- [Angular Material Official Documentation](https://material.angular.io/)
+- [Material Design Guidelines](https://material.io/design)

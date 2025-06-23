@@ -1,0 +1,143 @@
+---
+title: What are the differences between reactive forms and template driven forms?
+---
+
+## TL;DR
+
+Reactive forms and template-driven forms are two different approaches in Angular for handling user input through forms.
+
+- **Reactive Forms:** The form model is defined explicitly in the component class using `FormGroup`, `FormControl`, and `FormArray`. Validation is also defined programmatically in the component. They are synchronous, predictable, and easier to test, making them suitable for complex, dynamic, or large-scale forms.
+- **Template-Driven Forms:** The form model is created implicitly by directives like `NgModel` and `NgForm` directly in the template. Validation is defined using template directives (e.g., `required`, `minlength`). They are asynchronous and simpler to set up for basic forms but less scalable and harder to test for complex scenarios.
+
+Choose reactive forms for most applications, especially when forms are complex or require dynamic behavior. Use template-driven forms for very simple forms or quick prototypes.
+
+---
+
+## Introduction
+
+Angular provides two distinct ways to handle user input and manage form state: reactive forms and template-driven forms. While both achieve the same goal of capturing user data, they differ significantly in how the form model is created, how validation is handled, and their overall architecture. Understanding these differences is crucial for choosing the right approach based on the complexity and requirements of your application's forms.
+
+## Reactive forms
+
+Reactive forms are a model-driven approach where the form structure and data flow are defined explicitly in the component class.
+
+### Form model definition
+
+The form model is created programmatically in the component using classes like `FormControl` (for individual input fields), `FormGroup` (for a collection of controls), and `FormArray` (for dynamic lists of controls). You build the form tree in your component code.
+
+```typescript
+import { Component } from '@angular/core';
+import { FormControl, FormGroup, Validators } from '@angular/forms';
+
+@Component({
+  selector: 'app-reactive-form',
+  template: `
+    <form [formGroup]="userForm">
+      <input type="text" formControlName="name" placeholder="Name" />
+      <input type="email" formControlName="email" placeholder="Email" />
+      <button type="submit" [disabled]="!userForm.valid">Submit</button>
+    </form>
+  `,
+})
+export class ReactiveFormComponent {
+  userForm = new FormGroup({
+    name: new FormControl('', Validators.required),
+    email: new FormControl('', [Validators.required, Validators.email]),
+  });
+
+  // ... form submission logic
+}
+```
+
+### Validation
+
+Validation rules are defined directly within the component class when creating the `FormControl` or `FormGroup` instances, typically using the built-in `Validators` or custom validator functions.
+
+### Data flow
+
+Data flows from the component class to the template and vice-versa in a more explicit, unidirectional manner. Changes in the form model update the view, and user input updates the model.
+
+### Synchronicity
+
+Reactive forms are synchronous. The form model is always available and updated immediately, making it predictable and easier to reason about.
+
+### Scalability and testability
+
+This approach is highly scalable and maintainable for complex forms, dynamic forms (where controls are added or removed at runtime), and large-scale applications. Because the form logic resides in the component class, it is much easier to unit test the form model, validation, and data flow independently of the template.
+
+## Template-driven forms
+
+Template-driven forms are an implicit approach where the form model is primarily managed by directives in the template.
+
+### Form model definition
+
+The form model is created implicitly by Angular directives like `NgModel` and `NgForm` as you add form controls in the template. `NgForm` automatically binds to the `<form>` element and aggregates the `NgModel` instances within it.
+
+```html
+<form #userForm="ngForm">
+  <input
+    type="text"
+    name="name"
+    [(ngModel)]="userName"
+    required
+    placeholder="Name" />
+  <input
+    type="email"
+    name="email"
+    [(ngModel)]="userEmail"
+    required
+    email
+    placeholder="Email" />
+  <button type="submit" [disabled]="!userForm.valid">Submit</button>
+</form>
+```
+
+### Validation
+
+Validation is defined using HTML5 validation attributes (like `required`, `minlength`, `maxlength`, `pattern`) or Angular-specific validation directives (like `required`, `email`) directly in the template. Angular creates corresponding `FormControl` instances behind the scenes and attaches validators to them based on these attributes.
+
+### Data flow
+
+Data flow is typically bidirectional using `[(ngModel)]` (the banana-in-a-box syntax), which combines property binding (`[ngModel]`) and event binding (`(ngModelChange)`). This can sometimes make the data flow less explicit.
+
+### Synchronicity
+
+Template-driven forms are asynchronous. The form controls and their state are not immediately available because Angular needs to process the template directives first.
+
+### Scalability and testability
+
+This approach is simpler for basic forms and quick setups. However, it becomes less manageable and harder to scale for complex forms, dynamic scenarios, or when extensive custom validation is needed. Testing template-driven forms is more challenging as the form logic is tightly coupled with the template.
+
+## Key differences
+
+| Feature           | Reactive Forms                                  | Template-Driven Forms                              |
+| :---------------- | :---------------------------------------------- | :------------------------------------------------- |
+| **Form Model**    | Explicitly created in component class           | Implicitly created by directives in template       |
+| **Setup**         | Code-driven, explicit                           | Template-driven, implicit                          |
+| **Validation**    | Defined in component class (`Validators`)       | Defined in template directives/attributes          |
+| **Synchronicity** | Synchronous                                     | Asynchronous                                       |
+| **Scalability**   | Highly scalable for complex/dynamic forms       | Simpler for basic forms, less scalable for complex |
+| **Testability**   | Easier to unit test                             | Harder to unit test                                |
+| **Data Flow**     | Unidirectional (component to template and back) | Bidirectional (`[(ngModel)]`)                      |
+| **Immutability**  | Favors immutability (new state objects)         | Favors mutability (modifies data in place)         |
+
+## When to use which
+
+- **Choose Reactive Forms** for most applications, especially when:
+  - Forms are complex or have many inputs.
+  - Forms are dynamic (controls are added or removed).
+  - You need custom or complex validation logic.
+  - Testability is a priority.
+  - You prefer a more explicit and code-centric approach.
+- **Choose Template-Driven Forms** for:
+  - Very simple forms (e.g., a basic contact form).
+  - Quick prototypes.
+  - When you are migrating a simple form from AngularJS and want a similar syntax.
+
+In modern Angular development, reactive forms are generally the recommended approach due to their scalability, testability, and maintainability benefits.
+
+## Further reading
+
+- [Angular Documentation: Introduction to forms](https://angular.dev/guide/forms)
+- [Angular Documentation: Reactive forms](https://angular.dev/guide/forms/reactive-forms)
+- [Angular Documentation: Template-driven forms](https://angular.dev/guide/forms/template-driven-forms)

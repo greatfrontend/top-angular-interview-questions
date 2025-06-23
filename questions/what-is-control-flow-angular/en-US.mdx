@@ -1,0 +1,139 @@
+---
+title: What is control flow in Angular?
+---
+
+## TL;DR
+
+Angular's built-in control flow, available from Angular 17 onwards, is a new syntax for handling conditional rendering and list iteration directly within component templates. It replaces the older structural directives like `*ngIf`, `*ngFor`, and `*ngSwitch`.
+
+The new syntax uses block-like structures starting with `@`:
+
+- `@if`: For conditional rendering, similar to `*ngIf`, supporting `@else if` and `@else` blocks.
+- `@for`: For iterating over collections, similar to `*ngFor`, supporting an `@empty` block and requiring a `track` function for efficient updates.
+- `@switch`: For rendering one block based on a condition, similar to `*ngSwitch`, using `@case` and `@default` blocks.
+
+This new control flow offers several advantages:
+
+- Improved performance, especially for `@for` loops due to mandatory tracking.
+- Enhanced readability and simpler syntax without the leading `*`.
+- Better type checking.
+- Reduced bundle size as it's built into the compiler.
+
+It's the recommended way to handle control flow in modern Angular applications.
+
+---
+
+## What is control flow in Angular?
+
+Control flow in Angular refers to the mechanisms used within component templates to conditionally render elements or iterate over collections of data. It dictates which parts of the template are displayed based on certain conditions or how many times a specific template fragment is repeated for each item in a list.
+
+Historically, Angular used structural directives like `*ngIf`, `*ngFor`, and `*ngSwitch` for this purpose. However, from Angular 17 onwards, a new built-in control flow syntax was introduced as the preferred method.
+
+## Why was the new syntax introduced?
+
+The new built-in control flow syntax was introduced to address several limitations and improve upon the existing structural directives:
+
+### Improved performance
+
+The new `@for` loop, in particular, offers significant performance improvements. It requires a `track` function, which helps Angular efficiently identify items in a collection and update the DOM only for items that have changed, moved, or been removed. This avoids unnecessary re-rendering of the entire list, leading to faster updates, especially for large lists.
+
+### Enhanced readability
+
+The new syntax uses block-like structures (`@if`, `@for`, `@switch`) that are often considered more intuitive and easier to read than directives prefixed with `*`. The structure clearly delineates the start and end of the conditional or loop block.
+
+### Simpler syntax
+
+The leading `*` on structural directives could sometimes be confusing, especially when combined with other directives or when needing to use template references (`<ng-template>`). The new syntax avoids the `*` and uses a more direct block structure.
+
+### Better type checking
+
+The new control flow syntax is designed to work more seamlessly with Angular's type checking, providing better compile-time errors and warnings.
+
+### Reduced bundle size
+
+Because the new control flow is built directly into the Angular compiler, it doesn't require importing directives from `CommonModule` for basic usage, potentially leading to slightly smaller application bundles.
+
+## The new built-in control flow syntax
+
+The new syntax consists of three main blocks: `@if`, `@for`, and `@switch`.
+
+### `@if` block
+
+The `@if` block is used for conditional rendering. It evaluates an expression and renders the content within the block if the expression is truthy. It supports optional `@else if` and `@else` blocks.
+
+```html
+@if (user) {
+<p>Welcome, {{ user.name }}!</p>
+} @else if (isLoading) {
+<p>Loading user data...</p>
+} @else {
+<p>Please log in.</p>
+}
+```
+
+This replaces the functionality of `*ngIf`.
+
+### `@for` block
+
+The `@for` block is used to iterate over a collection (like an array) and render a template fragment for each item. It requires a `track` function to identify items uniquely, which is crucial for performance. It also supports an optional `@empty` block to display content when the collection is empty.
+
+```html
+@for (item of items; track item.id) {
+<div>{{ item.name }}</div>
+} @empty {
+<div>No items found.</div>
+}
+```
+
+Inside the `@for` block, several built-in variables are available:
+
+- `$index`: The index of the current item in the collection.
+- `$first`: A boolean indicating if the current item is the first.
+- `$last`: A boolean indicating if the current item is the last.
+- `$even`: A boolean indicating if the current item has an even index.
+- `$odd`: A boolean indicating if the current item has an odd index.
+- `$count`: The total number of items in the collection.
+
+```html
+@for (item of items; track item.id; let i = $index) {
+<div [class.even]="i % 2 === 0">{{ i + 1 }}: {{ item.name }}</div>
+}
+```
+
+This replaces the functionality of `*ngFor`. The `track` function is mandatory and should return a unique identifier for each item (e.g., `item.id`). If items don't have a unique ID, you can track by the item itself (`track item`) or by index (`track $index`), though tracking by index is generally discouraged unless the list is static or items are immutable.
+
+### `@switch` block
+
+The `@switch` block is used to render one block of content based on a matching expression. It works with `@case` blocks for specific values and an optional `@default` block if no case matches.
+
+```html
+@switch (status) { @case ('loading') {
+<p>Loading...</p>
+} @case ('success') {
+<p>Data loaded successfully!</p>
+} @case ('error') {
+<p>An error occurred.</p>
+} @default {
+<p>Unknown status.</p>
+} }
+```
+
+This replaces the functionality of `*ngSwitch`, `*ngSwitchCase`, and `*ngSwitchDefault`.
+
+## Comparison with structural directives
+
+While structural directives (`*ngIf`, `*ngFor`, `*ngSwitch`) are still supported for backward compatibility, the new built-in control flow is the recommended approach in modern Angular development (from Angular 17+).
+
+Key differences include:
+
+- **Syntax:** Block-based (`@if`, `@for`, `@switch`) vs. directive prefix (`*ngIf`, `*ngFor`, `*ngSwitch`).
+- **Performance:** New `@for` with mandatory `track` is generally more performant than `*ngFor` without `trackBy`.
+- **Bundle Size:** New control flow is built-in, potentially reducing the need for `CommonModule` imports for basic usage.
+- **Readability:** Often considered more readable due to the clear block structure.
+- **Type Checking:** Better integrated with Angular's type system.
+
+Angular provides schematics to automatically migrate existing structural directives to the new built-in syntax.
+
+## Further reading
+
+- [Angular Documentation: Built-in control flow](https://angular.dev/guide/templates/control-flow)

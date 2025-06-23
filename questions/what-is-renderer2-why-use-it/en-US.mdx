@@ -1,0 +1,159 @@
+---
+title: What is Renderer2 and why would you use it?
+---
+
+## TL;DR
+
+`Renderer2` is an Angular service that provides an abstraction layer over the DOM manipulation API. You use it to safely interact with the DOM or other rendering environments (like server-side rendering or web workers) without directly accessing the native elements via `ElementRef.nativeElement`.
+
+Using `Renderer2` is preferred over direct DOM manipulation because:
+
+- It makes your application compatible with server-side rendering (SSR) and web workers, where the native DOM might not exist.
+- It provides a layer of security by sanitizing values when setting properties or attributes.
+- It abstracts away platform-specific details, making your code more portable.
+
+Common methods include `createElement`, `appendChild`, `setProperty`, `setAttribute`, `addClass`, `removeClass`, `setStyle`, and `listen`. You inject `Renderer2` into your component or directive and use it along with `ElementRef` to target specific elements.
+
+```typescript
+import { Component, ElementRef, Renderer2, AfterViewInit } from '@angular/core';
+
+@Component({
+  selector: 'app-example',
+  template: '<div #myDiv>Hello</div>',
+})
+export class ExampleComponent implements AfterViewInit {
+  constructor(private el: ElementRef, private renderer: Renderer2) {}
+
+  ngAfterViewInit() {
+    // Safely set a style using Renderer2
+    const div = this.el.nativeElement.querySelector('#myDiv');
+    this.renderer.setStyle(div, 'color', 'blue');
+
+    // Safely listen to an event
+    this.renderer.listen(div, 'click', () => {
+      console.log('Div clicked!');
+    });
+  }
+}
+```
+
+---
+
+## What is Renderer2?
+
+`Renderer2` is an Angular service that acts as an abstraction layer for interacting with the host environment's rendering API. In most browser-based Angular applications, this environment is the Document Object Model (DOM). However, Angular can also run in other environments like server-side rendering (SSR), web workers, or even mobile native platforms (though Angular's primary focus is web).
+
+`Renderer2` provides a set of methods that allow you to manipulate elements, attributes, properties, styles, and events in a way that is decoupled from the specific rendering platform. It is the recommended way to perform DOM manipulation in Angular when you need to go beyond template bindings.
+
+It was introduced to replace the older `Renderer` service, offering a simpler API and better support for different rendering environments. `RendererFactory2` is the service responsible for creating instances of `Renderer2`.
+
+## Why would you use Renderer2?
+
+You would use `Renderer2` primarily for the following reasons:
+
+### Platform independence and server-side rendering (SSR) compatibility
+
+Directly accessing the DOM using `ElementRef.nativeElement` works fine in a standard browser environment. However, if you want your application to support server-side rendering (using Angular Universal) or run in a web worker, the `nativeElement` property might not represent a browser DOM element. `Renderer2` provides a consistent API that works across these different environments, abstracting away the underlying platform details. Using `Renderer2` ensures your component or directive logic remains functional regardless of where the Angular application is executed.
+
+### Security
+
+`Renderer2` includes built-in sanitization mechanisms when setting properties or attributes. This helps protect your application against cross-site scripting (XSS) attacks by cleaning potentially unsafe values before they are applied to the DOM. While Angular's template binding also performs sanitization, using `Renderer2` for programmatic DOM manipulation adds an extra layer of safety compared to direct `nativeElement` access.
+
+### Abstraction and testability
+
+By using `Renderer2`, you interact with an abstract rendering API rather than the concrete DOM API. This can make your components and directives easier to test, as you can potentially mock the `Renderer2` service in unit tests without needing a full browser environment.
+
+### Controlled DOM manipulation
+
+`Renderer2` provides a structured way to perform DOM operations. While direct `nativeElement` access gives you full power, it also makes it easier to introduce errors or performance issues if not used carefully. `Renderer2` methods guide you towards safer and more predictable manipulations.
+
+## Common Renderer2 methods
+
+Here are some frequently used methods of the `Renderer2` service:
+
+- `createElement(name: string, namespace?: string | null)`: Creates an element with the given name.
+- `appendChild(parent: any, newChild: any)`: Appends a child element to a parent element.
+- `insertBefore(parent: any, newChild: any, refChild: any)`: Inserts a child element before a reference element.
+- `removeChild(parent: any, oldChild: any, isDestroyHost?: boolean)`: Removes a child element from a parent element.
+- `selectRootElement(selectorOrNode: string | any, preserveContent?: boolean)`: Selects the root element of the application.
+- `createComment(value: string)`: Creates a comment node.
+- `createText(value: string)`: Creates a text node.
+- `destroyNode(node: any)`: Destroys a node.
+- `listen(target: 'window' | 'document' | 'body' | any, eventName: string, callback: (event: any) => boolean | void)`: Listens to an event on a target element, window, document, or body. Returns a function to unsubscribe.
+- `setProperty(el: any, name: string, value: any)`: Sets a property on an element.
+- `setAttribute(el: any, name: string, value: string, namespace?: string | null)`: Sets an attribute on an element.
+- `removeAttribute(el: any, name: string, namespace?: string | null)`: Removes an attribute from an element.
+- `addClass(el: any, name: string)`: Adds a CSS class to an element.
+- `removeClass(el: any, name: string)`: Removes a CSS class from an element.
+- `setStyle(el: any, style: string, value: any, flags?: RendererStyleFlags2)`: Sets a CSS style on an element.
+- `removeStyle(el: any, style: string, flags?: RendererStyleFlags2)`: Removes a CSS style from an element.
+- `parentNode(node: any)`: Gets the parent node of a given node.
+- `nextSibling(node: any)`: Gets the next sibling of a given node.
+
+## Example usage
+
+To use `Renderer2`, you typically inject it along with `ElementRef` into your component or directive:
+
+```typescript
+import { Directive, ElementRef, Renderer2, Input, OnInit } from '@angular/core';
+
+@Directive({
+  selector: '[appHighlight]',
+})
+export class HighlightDirective implements OnInit {
+  @Input('appHighlight') highlightColor: string = 'yellow';
+
+  constructor(private el: ElementRef, private renderer: Renderer2) {}
+
+  ngOnInit() {
+    // Use Renderer2 to set the background color style
+    this.renderer.setStyle(
+      this.el.nativeElement,
+      'backgroundColor',
+      this.highlightColor
+    );
+  }
+}
+```
+
+In this example, the `HighlightDirective` uses `Renderer2` to set the `backgroundColor` style of the element it is applied to. This is a safe and platform-independent way to manipulate the element's style.
+
+Another example showing event listening:
+
+```typescript
+import { Directive, ElementRef, Renderer2, OnDestroy } from '@angular/core';
+
+@Directive({
+  selector: '[appClickLogger]',
+})
+export class ClickLoggerDirective implements OnDestroy {
+  private unsubscribe: () => void;
+
+  constructor(private el: ElementRef, private renderer: Renderer2) {
+    // Use Renderer2 to listen for click events on the host element
+    this.unsubscribe = this.renderer.listen(
+      this.el.nativeElement,
+      'click',
+      event => {
+        console.log('Element clicked:', this.el.nativeElement);
+        console.log('Event details:', event);
+      }
+    );
+  }
+
+  ngOnDestroy() {
+    // Clean up the event listener when the directive is destroyed
+    if (this.unsubscribe) {
+      this.unsubscribe();
+    }
+  }
+}
+```
+
+Here, `Renderer2`'s `listen` method is used to subscribe to click events on the host element. The method returns an unsubscribe function, which is crucial for preventing memory leaks by cleaning up the listener in the `ngOnDestroy` lifecycle hook.
+
+## Further reading
+
+- [Angular Documentation: Renderer2](https://angular.dev/api/core/Renderer2)
+- [Angular Documentation: ElementRef](https://angular.dev/api/core/ElementRef)
+- [Angular Documentation: Security - Sanitization](https://angular.dev/guide/security#sanitization)

@@ -1,0 +1,174 @@
+---
+title: What is a singleton service and how can it be achieved?
+---
+
+## TL;DR
+
+A singleton service in Angular means that only a single instance of that service exists throughout the entire application. This is useful for managing global state, sharing data or logic across different components and services, or optimizing resource usage.
+
+The most common and recommended way to achieve a singleton service is by providing it at the root level using the `providedIn: 'root'` property in the `@Injectable()` decorator:
+
+```typescript
+import { Injectable } from '@angular/core';
+
+@Injectable({
+  providedIn: 'root', // Makes this service a singleton
+})
+export class DataService {
+  private data: any;
+
+  setData(value: any) {
+    this.data = value;
+  }
+
+  getData() {
+    return this.data;
+  }
+}
+```
+
+When `providedIn: 'root'` is used, Angular registers the service with the application's root injector. Any component or service that injects `DataService` anywhere in the application will receive the _same_ instance.
+
+---
+
+## What is a singleton service?
+
+In the context of an Angular application, a singleton service is a service class for which only one instance is created and used throughout the entire application's lifecycle. When different parts of the application (components, other services, etc.) inject this service, they all receive a reference to the _same_ single instance.
+
+## Why use a singleton service?
+
+Using singleton services is a common pattern for several reasons:
+
+### Managing global state or shared data
+
+A singleton service can hold data that needs to be accessed and potentially modified by multiple, disparate parts of the application. Since there's only one instance, all consumers interact with the same data.
+
+### Sharing logic or utility functions
+
+Common business logic, utility functions, or interactions with external APIs can be encapsulated in a service. Making it a singleton ensures that all parts of the app use the same implementation and potentially share cached results or resources.
+
+### Resource optimization
+
+If a service manages resources like network connections, timers, or large in-memory caches, having only one instance prevents resource duplication and potential conflicts.
+
+## How to achieve a singleton service
+
+There are two primary ways to make a service a singleton in Angular, with one being the modern and preferred approach.
+
+### Using `providedIn: 'root'` (Recommended)
+
+This is the standard and most efficient way to create a singleton service available from Angular 6 onwards.
+
+- You specify `providedIn: 'root'` within the `@Injectable()` decorator of your service class.
+- Angular automatically registers this service with the application's root injector.
+- Any component, service, or module that injects this service anywhere in the application dependency tree will receive the single instance provided by the root injector.
+- A key benefit is tree-shaking: if the service is never actually injected anywhere in the application, the Angular build process can remove it from the final bundle, reducing application size.
+
+```typescript
+import { Injectable } from '@angular/core';
+
+@Injectable({
+  providedIn: 'root', // This makes the service a singleton
+})
+export class AppStateService {
+  private currentUser: string | null = null;
+
+  setCurrentUser(user: string) {
+    this.currentUser = user;
+  }
+
+  getCurrentUser(): string | null {
+    return this.currentUser;
+  }
+}
+```
+
+### Providing in the root module (`AppModule`)
+
+This was the common approach before `providedIn: 'root'` was introduced.
+
+- You list the service in the `providers` array of your application's root module, typically `AppModule`.
+- When Angular creates the injector for `AppModule`, it registers the service.
+- Since `AppModule` is the root module and its injector is the root injector (unless overridden), the service becomes available application-wide as a singleton.
+- The drawback compared to `providedIn: 'root'` is that the service will _always_ be included in the application bundle, even if it's never injected, because it's explicitly listed in the module's providers.
+
+```typescript
+// src/app/app.module.ts
+import { NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+import { AppComponent } from './app.component';
+import { AppStateService } from './app-state.service'; // Import the service
+
+@NgModule({
+  declarations: [AppComponent],
+  imports: [BrowserModule],
+  providers: [
+    AppStateService, // Providing the service here makes it a singleton
+  ],
+  bootstrap: [AppComponent],
+})
+export class AppModule {}
+```
+
+While this works, `providedIn: 'root'` is generally preferred due to its tree-shaking capabilities and simpler syntax (no need to add it to a module's `providers` array).
+
+### Providing in a Core Module
+
+Sometimes, services that should be singletons are grouped into a `CoreModule`. This module is then imported _only_ by the root `AppModule`.
+
+- Create a `CoreModule` and list the singleton services in its `providers` array.
+- Import `CoreModule` _only_ in `AppModule`.
+- To prevent other modules (especially lazy-loaded ones) from importing `CoreModule` and potentially creating duplicate service instances, a common pattern is to add a guard in the `CoreModule` constructor.
+
+```typescript
+// src/app/core/core.module.ts
+import { NgModule, Optional, SkipSelf } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { AppStateService } from './app-state.service'; // Assume service is here
+
+@NgModule({
+  declarations: [],
+  imports: [CommonModule],
+  providers: [
+    AppStateService, // Provided within CoreModule
+  ],
+})
+export class CoreModule {
+  constructor(@Optional() @SkipSelf() parentModule?: CoreModule) {
+    if (parentModule) {
+      throw new Error(
+        'CoreModule is already loaded. Import it in the AppModule only'
+      );
+    }
+  }
+}
+```
+
+```typescript
+// src/app/app.module.ts
+import { NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+import { AppComponent } from './app.component';
+import { CoreModule } from './core/core.module'; // Import CoreModule
+
+@NgModule({
+  declarations: [AppComponent],
+  imports: [
+    BrowserModule,
+    CoreModule, // Import CoreModule here
+  ],
+  providers: [], // No need to list AppStateService here if provided in CoreModule
+  bootstrap: [AppComponent],
+})
+export class AppModule {}
+```
+
+This approach is useful for organizing singleton services but still relies on the root module providing the module containing the services. `providedIn: 'root'` is generally simpler if you don't need the organizational structure of a `CoreModule` for your singletons.
+
+In summary, `providedIn: 'root'` is the most straightforward and recommended way to ensure a service is a singleton application-wide in modern Angular applications.
+
+## Further reading
+
+- [Angular Dependency Injection](https://angular.dev/guide/di)
+- [Angular Providers](https://angular.dev/guide/di/dependency-injection-providers)
+- [ProvidedIn 'root' vs providing in a module](https://angular.dev/guide/di/dependency-injection-providers#providing-a-service)

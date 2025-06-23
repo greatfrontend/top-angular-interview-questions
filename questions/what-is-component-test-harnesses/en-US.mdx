@@ -1,0 +1,127 @@
+---
+title: What is Component Test Harnesses?
+---
+
+## TL;DR
+
+Component Test Harnesses, available from Angular 9 onwards as part of the Angular CDK, provide a standardized way to interact with Angular Material or CDK components within your tests. Instead of relying on fragile DOM selectors that can break when the component's internal structure changes, you use a harness object that exposes methods representing the component's public API (e.g., `click()`, `isChecked()`, `getText()`). This makes your tests more robust, readable, and maintainable by abstracting away the component's implementation details. You typically use `TestbedHarnessEnvironment` in component tests to get a loader, and then use the loader to find and interact with specific component harnesses like `MatButtonHarness` or `MatInputHarness`.
+
+---
+
+## What are Component Test Harnesses?
+
+Component Test Harnesses are a set of utilities provided by the Angular CDK (`@angular/cdk/testing`) that allow you to write tests for Angular Material or CDK components in a more robust and maintainable way. They provide an abstraction layer over the component's internal DOM structure.
+
+Instead of querying the DOM directly using CSS selectors to find elements and simulate user interactions (like clicking a button or typing into an input), you interact with a component through a "harness" object. This harness object exposes methods that represent the component's public behavior and state.
+
+For example, instead of finding a button element by its class and calling `.click()` on the native element, you would get a `MatButtonHarness` instance and call its `click()` method.
+
+## Why use Component Test Harnesses?
+
+Using component test harnesses offers several significant advantages for testing components, especially those from libraries like Angular Material:
+
+### Robustness against DOM changes
+
+The primary benefit is that your tests become much less fragile. If the internal DOM structure or CSS classes of an Angular Material component change in a future version (which can happen in minor or patch releases), your tests written with harnesses are less likely to break because they interact with the component via its stable harness API, not its internal implementation details.
+
+### Improved readability
+
+Tests written with harnesses are often easier to read and understand. They describe the interaction in terms of the component's behavior (e.g., "click the button", "check the checkbox") rather than low-level DOM manipulation (e.g., "find the element with class `.mat-button` and dispatch a click event").
+
+### Easier maintenance
+
+When you update Angular Material or the CDK, tests using harnesses are more likely to continue working without modification. If a breaking change _does_ occur in a component's API, the harness for that component is updated to reflect it, providing a clear point of failure in your tests that corresponds to the component's public contract.
+
+### Abstraction
+
+Harnesses provide a consistent API for interacting with different types of components. This abstraction makes it easier to write tests that interact with various components in a similar manner.
+
+## How to use Component Test Harnesses
+
+Using component test harnesses typically involves three main steps within your Angular component tests (usually written with Jasmine and Karma/Jest):
+
+### 1. Import the necessary modules
+
+You need `TestbedHarnessEnvironment` from `@angular/cdk/testing` to create a loader for your test environment, and the specific harness for the component you want to test (e.g., `MatButtonHarness` from `@angular/material/button/testing`).
+
+```typescript
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
+import { HarnessLoader } from '@angular/cdk/testing';
+import { MatButtonModule } from '@angular/material/button';
+import { MatButtonHarness } from '@angular/material/button/testing';
+
+// Assume MyComponent uses <button mat-button>
+import { MyComponent } from './my.component';
+```
+
+### 2. Create a harness loader
+
+After setting up your `TestBed` and creating the component fixture, you create a `HarnessLoader` instance using `TestbedHarnessEnvironment.loader()`.
+
+```typescript
+describe('MyComponent', () => {
+  let fixture: ComponentFixture<MyComponent>;
+  let loader: HarnessLoader;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [MatButtonModule], // Import modules needed by MyComponent
+      declarations: [MyComponent],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(MyComponent);
+    fixture.detectChanges(); // Initialize the component
+
+    // Create the harness loader
+    loader = TestbedHarnessEnvironment.loader(fixture);
+  });
+
+  it('should load a button harness', async () => {
+    // ... test logic
+  });
+});
+```
+
+### 3. Find and interact with harnesses
+
+Use the `loader` to find instances of the desired component harness. You can find a single instance using `getHarness()` or multiple instances using `getAllHarnesses()`. These methods return promises, so you'll use `async/await`.
+
+Once you have a harness instance, you can call its methods to interact with the component or query its state.
+
+```typescript
+it('should click the button and perform an action', async () => {
+  // Find the button harness
+  const button = await loader.getHarness(MatButtonHarness);
+
+  // Interact with the button using its harness methods
+  const text = await button.getText();
+  expect(text).toBe('Click Me'); // Example: check button text
+
+  await button.click(); // Example: simulate a click
+
+  // Add assertions based on the expected outcome of the click
+  // e.g., check if a method on the component was called, or if
+  // something in the DOM changed as a result.
+  expect(fixture.componentInstance.buttonClicked).toBe(true);
+});
+
+it('should find multiple buttons', async () => {
+  // Assuming MyComponent has multiple mat-buttons
+  const buttons = await loader.getAllHarnesses(MatButtonHarness);
+  expect(buttons.length).toBe(2); // Example: check the number of buttons
+});
+```
+
+You can also use `getHarness` or `getAllHarnesses` on a harness instance itself to find harnesses _within_ that component (e.g., finding a `MatInputHarness` within a `MatFormFieldHarness`).
+
+## Where are they available?
+
+Component Test Harnesses are part of the Angular CDK (`@angular/cdk/testing`). Specific harness implementations for Angular Material components are located within the testing sub-package of each component module (e.g., `@angular/material/button/testing`, `@angular/material/input/testing`).
+
+While primarily designed for Angular Material and CDK components, the `@angular/cdk/testing` package provides the infrastructure to write custom harnesses for your own components if needed, although this is less common.
+
+## Further reading
+
+- [Angular Documentation: Component Test Harnesses](https://angular.io/guide/testing/test-harnesses)
+- [Angular Material Documentation: Testing with harnesses](https://material.angular.io/guide/testing/test-harnesses)

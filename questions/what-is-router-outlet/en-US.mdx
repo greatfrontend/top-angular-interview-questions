@@ -1,0 +1,123 @@
+---
+title: What is a router outlet?
+---
+
+## TL;DR
+
+A `RouterOutlet` is a directive provided by Angular's router module. It acts as a placeholder in your application's template where the router should display the component corresponding to the current route. When the URL changes and matches a configured route, the router dynamically loads the associated component and renders it inside the `<router-outlet>` tag. Think of it as a dynamic slot in your layout that gets filled with different components depending on the navigation state.
+
+---
+
+## What is RouterOutlet?
+
+The `RouterOutlet` is a directive from the `@angular/router` library. It is a fundamental part of Angular's routing system. Its primary purpose is to mark the location within a template where the component associated with the active route should be rendered.
+
+### Placeholder for routed components
+
+Essentially, `<router-outlet>` serves as a dynamic placeholder. When the Angular router determines which component should be displayed based on the current URL, it renders that component inside the element where the `RouterOutlet` directive is placed.
+
+## Purpose of RouterOutlet
+
+The main purpose of the `RouterOutlet` is to enable single-page applications (SPAs) to display different views (components) without requiring a full page reload.
+
+### Dynamic content rendering
+
+Instead of having static content or manually managing which component is visible, the `RouterOutlet` allows the router to handle this dynamically. As the user navigates through the application, the router swaps out the component currently displayed within the `RouterOutlet` with the component for the new route.
+
+### Structuring application layout
+
+Typically, you place the `RouterOutlet` in your application's main layout component (like `AppComponent`). This allows common elements like headers, footers, or navigation bars to remain static while only the main content area changes based on the route.
+
+## How RouterOutlet works
+
+1.  **Route Matching:** The Angular router listens for changes in the browser's URL.
+2.  **Configuration Lookup:** It compares the current URL against the route configurations defined in your application.
+3.  **Component Identification:** Once a match is found, the router identifies the component associated with that route.
+4.  **Rendering:** The router then instantiates that component and renders its view inside the `<router-outlet>` element found in the template.
+5.  **Destruction:** If the route changes again, the router destroys the previously rendered component before rendering the new one in the same location.
+
+## Usage
+
+You use the `RouterOutlet` directive by simply adding the `<router-outlet>` tag to your component's template where you want the routed content to appear.
+
+### Basic example
+
+In a typical application, you might place it in your main `app.component.html`:
+
+```html
+<!-- app.component.html -->
+<app-header></app-header>
+
+<main>
+  <!-- This is where routed components will be displayed -->
+  <router-outlet></router-outlet>
+</main>
+
+<app-footer></app-footer>
+```
+
+With a route configuration like this:
+
+```typescript
+// app.routes.ts (or app-routing.module.ts)
+import { Routes } from '@angular/router';
+import { HomeComponent } from './home/home.component';
+import { AboutComponent } from './about/about.component';
+
+export const routes: Routes = [
+  { path: '', component: HomeComponent },
+  { path: 'about', component: AboutComponent },
+  // ... other routes
+];
+```
+
+When the user navigates to `/`, the `HomeComponent` will be rendered inside the `<router-outlet>`. When they navigate to `/about`, the `AboutComponent` will replace the `HomeComponent` inside the same `<router-outlet>`.
+
+### Multiple and named outlets
+
+Angular also supports multiple `RouterOutlet` instances in a single template, which is useful for complex layouts (e.g., a main content area and a sidebar that changes with the route). These are typically used with [named outlets](https://angular.dev/guide/router/routing#named-outlets):
+
+```html
+<!-- Complex layout example -->
+<div class="container">
+  <div class="main-content">
+    <router-outlet></router-outlet>
+    <!-- Primary outlet -->
+  </div>
+  <div class="sidebar">
+    <router-outlet name="sidebar"></router-outlet>
+    <!-- Named outlet -->
+  </div>
+</div>
+```
+
+And the corresponding route configuration would specify which outlet to target:
+
+```typescript
+// Example route config for named outlet
+import { Routes } from '@angular/router';
+import { MainComponent } from './main/main.component';
+import { SidebarComponent } from './sidebar/sidebar.component';
+
+export const routes: Routes = [
+  {
+    path: 'dashboard',
+    component: MainComponent, // Renders in the primary outlet
+    children: [
+      {
+        path: 'details',
+        component: SidebarComponent, // Renders in the primary outlet by default
+        outlet: 'sidebar', // Renders in the 'sidebar' named outlet instead
+      },
+    ],
+  },
+  // ...
+];
+```
+
+## Further reading
+
+- [Angular Router guide](https://angular.dev/guide/router)
+- [RouterOutlet API documentation](https://angular.dev/api/router/RouterOutlet)
+- [Configuring routes](https://angular.dev/guide/router/routing#configuring-routes)
+- [Named outlets](https://angular.dev/guide/router/routing#named-outlets)

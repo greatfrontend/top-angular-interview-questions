@@ -1,0 +1,202 @@
+---
+title: How does Angular support internationalization (i18n) of applications?
+---
+
+## TL;DR
+
+Angular provides built-in support for internationalization (i18n) primarily through a build-time process. You mark text and attributes in your templates and code for translation using the `i18n` attribute or the `$localize` tagged template literal.
+
+The Angular CLI command `ng extract-i18n` is then used to collect all these marked messages into a translation file (like XLIFF or XMB). This file is given to translators.
+
+Once translated, you configure your `angular.json` file or use CLI arguments (`--localize`) to tell Angular which translation files to use for specific locales. When you build or serve your application for a particular locale, Angular replaces the original messages with the translated ones, creating locale-specific versions of your application. Angular also provides pipes like `DatePipe`, `NumberPipe`, and `CurrencyPipe` that automatically format values based on the application's locale.
+
+---
+
+## How Angular supports internationalization (i18n) of applications
+
+Angular provides a comprehensive, built-in system for internationalizing applications, allowing you to display your application in multiple languages and regions. This support is primarily implemented as a build-time process.
+
+### Marking text for translation
+
+You identify translatable content in your application using specific attributes and syntax:
+
+- **`i18n` attribute on HTML elements**: You add the `i18n` attribute to any element containing text you want to translate. You can optionally provide a description and a meaning to help translators.
+
+  ```html
+  <h1 i18n="@@pageTitle">Welcome to the application</h1>
+  <p i18n>This is a paragraph that needs translation.</p>
+  ```
+
+  The `@@pageTitle` is a custom ID you can assign for easier referencing.
+
+- **`i18n-` prefix for attributes**: To translate an element's attribute (like `alt`, `title`, `aria-label`), you prefix the attribute name with `i18n-`.
+
+  ```html
+  <img src="logo.png" i18n-alt="@@logoAlt" alt="Company Logo" />
+  ```
+
+- **`$localize` tagged template literal**: Available from Angular version 9 onwards, this is used to mark strings for translation directly within component code, services, or other TypeScript files, outside of templates.
+
+  ```typescript
+  import { Component } from '@angular/core';
+  import { $localize } from '@angular/localize';
+
+  @Component({
+    /* ... */
+  })
+  export class MyComponent {
+    greeting = $localize`:@@helloMessage:Hello, world!`;
+  }
+  ```
+
+### Handling plurals and select variations
+
+For messages that change based on a value (like counts for plurals) or a specific condition (like gender), you use the ICU message format within the `i18n` attribute.
+
+- **Plurals**: Use the `plural` keyword.
+
+  ```html
+  <p i18n>
+    {{ count, plural, =0 {No items} =1 {One item} other {{{ count }} items} }}
+  </p>
+  ```
+
+- **Select**: Use the `select` keyword.
+  ```html
+  <p i18n>
+    {{ gender, select, male {He} female {She} other {They} }} will be here soon.
+  </p>
+  ```
+
+### Formatting dates, numbers, and currencies
+
+Angular provides built-in pipes that automatically format values according to the application's locale rules, which are registered separately.
+
+- `DatePipe`: Formats dates.
+- `NumberPipe`: Formats numbers (decimal, percent, currency).
+- `CurrencyPipe`: Formats currency values.
+
+```html
+<p>{{ today | date:'fullDate' }}</p>
+<p>{{ price | currency:'USD' }}</p>
+<p>{{ percentage | percent }}</p>
+```
+
+These pipes rely on locale data being registered for the specific language/region.
+
+### Extracting translation messages
+
+Once content is marked, you use the Angular CLI to extract all the messages into a source translation file.
+
+```bash
+ng extract-i18n --output-path src/locale --format xlf
+```
+
+This command scans your templates and code for `i18n` attributes and `$localize` calls and generates a file (e.g., `messages.xlf`) in the specified format (XLIFF 1.2, XLIFF 2.0, XMB, or ARB). This file contains all the original strings and their associated metadata (like descriptions, meanings, and source locations).
+
+### Translating the messages
+
+The generated source translation file (e.g., `messages.xlf`) is given to translators. They create copies of this file for each target language (e.g., `messages.fr.xlf` for French, `messages.es.xlf` for Spanish) and fill in the translations for each message ID.
+
+### Configuring and building for locales
+
+Angular's i18n is primarily a build-time process. You configure your `angular.json` file to specify the locales your application supports and the location of their translation files.
+
+```json
+"projects": {
+  "my-app": {
+    "i18n": {
+      "sourceLocale": "en-US",
+      "locales": {
+        "fr": {
+          "translation": "src/locale/messages.fr.xlf"
+        },
+        "es": {
+          "translation": "src/locale/messages.es.xlf"
+        }
+      }
+    },
+    "architect": {
+      "build": {
+        "options": { /* ... */ },
+        "configurations": {
+          "production": { /* ... */ },
+          "fr": {
+            "localize": ["fr"]
+          },
+          "es": {
+            "localize": ["es"]
+          }
+        }
+      },
+      "serve": {
+        "options": { /* ... */ },
+        "configurations": {
+          "production": { /* ... */ },
+          "fr": {
+            "browserTarget": "my-app:build:development,fr"
+          },
+          "es": {
+            "browserTarget": "my-app:build:development,es"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+To build or serve the application for a specific locale, you use the `--localize` flag or specify the locale configuration:
+
+```bash
+# Build for French and Spanish
+ng build --localize
+
+# Or build for a specific locale defined in angular.json
+ng build --configuration=fr
+
+# Serve for French
+ng serve --configuration=fr
+```
+
+When building with `--localize`, Angular creates separate bundles for each specified locale, replacing the original strings with their translations. The correct bundle is typically served based on the user's browser locale or a path/domain strategy configured in your web server.
+
+### Registering locale data
+
+For pipes like `DatePipe`, `NumberPipe`, and `CurrencyPipe` to format correctly for a specific locale, you need to register the corresponding locale data provided by Angular. This is typically done in your `src/main.ts` file.
+
+```typescript
+import { registerLocaleData } from '@angular/common';
+import localeFr from '@angular/common/locales/fr';
+import localeEs from '@angular/common/locales/es';
+
+registerLocaleData(localeFr, 'fr');
+registerLocaleData(localeEs, 'es');
+```
+
+You then provide the `LOCALE_ID` token in your application's root module or component to tell Angular which locale to use for formatting.
+
+```typescript
+import { LOCALE_ID, NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+import { AppComponent } from './app.component';
+
+@NgModule({
+  declarations: [AppComponent],
+  imports: [BrowserModule],
+  providers: [
+    // Set the locale dynamically based on configuration or browser
+    { provide: LOCALE_ID, useValue: 'fr' },
+  ],
+  bootstrap: [AppComponent],
+})
+export class AppModule {}
+```
+
+By following these steps, Angular's build process generates locale-specific versions of your application, ensuring that text, attributes, and formatted values are displayed correctly for users in different regions.
+
+## Further reading
+
+- [Angular Documentation: Internationalization (i18n)](https://angular.dev/guide/i18n)
+- [Angular Documentation: `$localize` API](https://angular.dev/api/localize)
+- [Angular Documentation: Formatting data based on locale](https://angular.dev/guide/i18n/format-data-locale)
