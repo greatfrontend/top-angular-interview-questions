@@ -89,7 +89,7 @@ Angular provides three strategies for view encapsulation, which you specify usin
 ### `ViewEncapsulation.ShadowDom`
 
 - Available from Angular 6 onwards.
-- **How it works:** Angular uses the browser's native [Shadow DOM API](https://developer.mozilla.org/en-US/docs/Web/API/Shadow_DOM_API). It attaches a shadow root to the component's host element and places the component's template and styles inside this shadow root. Styles defined within the shadow root are truly isolated and do not leak out, nor do external styles penetrate the shadow boundary (except for inherited CSS properties like `color` or `font-family`, and CSS variables).
+- **How it works:** Angular uses the browser's native [Shadow DOM API](https://developer.mozilla.org/en-US/docs/Web/API/Web_components/Using_shadow_DOM). It attaches a shadow root to the component's host element and places the component's template and styles inside this shadow root. Styles defined within the shadow root are truly isolated and do not leak out, nor do external styles penetrate the shadow boundary (except for inherited CSS properties like `color` or `font-family`, and CSS variables).
 - **Example:**
   If you have the same component as above, with `ShadowDom` encapsulation, Angular might render it like this:
 
@@ -157,5 +157,5 @@ Sometimes you need to style elements within an encapsulated component from outsi
 
 ## Further reading
 
-- [Angular Documentation: View Encapsulation](https://angular.dev/style-guide/component-styles#view-encapsulation)
-- [MDN Web Docs: Using Shadow DOM](https://developer.mozilla.org/en-US/docs/Web/API/Shadow_DOM_API/Using_shadow_DOM)
+- [Angular Documentation: View Encapsulation](https://angular.dev/api/core/ViewEncapsulation)
+- [MDN Web Docs: Using Shadow DOM](https://developer.mozilla.org/en-US/docs/Web/API/Web_components/Using_shadow_DOM)

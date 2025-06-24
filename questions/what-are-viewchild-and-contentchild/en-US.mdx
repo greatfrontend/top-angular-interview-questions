@@ -4,36 +4,53 @@ title: What are `viewChild()` and `contentChild()` and how do they differ?
 
 ## TL;DR
 
-`viewChild()` and `contentChild()` are decorators used in Angular components to query elements or directives from the component's template or projected content.
+`viewChild()` and `contentChild()` are functions (APIs) introduced in Angular that provide a modern, functional, and signal-based way to query elements or directives from a component's template or projected content. They are available from Angular 17.1 onwards.
 
-- `viewChild()` queries elements or directives _within the component's own template_. It's typically available after the `AfterViewInit` lifecycle hook.
-- `contentChild()` queries elements or directives that are _projected into the component_ using `<ng-content>`. It's typically available after the `AfterContentInit` lifecycle hook.
+- `viewChild()` queries for the _first_ element or directive within the **component's own template**. It returns a `Signal` that will emit the queried instance (or `undefined`/`null`) after the view is initialized.
+- `contentChild()` queries for the _first_ element or directive that is **projected into the component** via `<ng-content>`. It also returns a `Signal` that will emit the queried instance after the projected content is initialized.
 
-The core difference is _where_ they look: `viewChild` looks inside the component's `<template>`, while `contentChild` looks inside the `<ng-content>` slot where parent components place content.
+The core difference is their lookup scope: `viewChild()` looks inside the component's internal view, while `contentChild()` looks within the content provided by a parent component through content projection. Both return reactive Signals, making their values automatically update when the queried element appears or disappears.
 
 ```typescript
-import { Component, ViewChild, ElementRef, ContentChild } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  AfterViewInit,
+  AfterContentInit,
+  viewChild,
+  contentChild,
+  signal,
+  computed,
+} from '@angular/core';
 
 @Component({
   selector: 'app-my-component',
   template: `
     <p #myViewElement>This is part of the component's view.</p>
     <ng-content></ng-content>
+    @if (viewElement()) {
+    <p>View element is present!</p>
+    } @if (projectedElement()) {
+    <p>Projected element is present!</p>
+    }
   `,
+  standalone: true,
 })
-export class MyComponent {
+export class MyComponent implements AfterViewInit, AfterContentInit {
   // Queries the <p> tag within this component's template
-  @ViewChild('myViewElement') viewElement!: ElementRef;
+  viewElement = viewChild<ElementRef>('myViewElement');
 
   // Queries an element projected into <ng-content>
-  @ContentChild('myProjectedElement') projectedElement!: ElementRef;
+  projectedElement = contentChild<ElementRef>('myProjectedElement');
 
   ngAfterViewInit() {
-    console.log('View Element:', this.viewElement?.nativeElement); // Available here
+    // The signal's value is available here, or can be read reactively in templates or effects
+    console.log('View Element:', this.viewElement()?.nativeElement);
   }
 
   ngAfterContentInit() {
-    console.log('Projected Element:', this.projectedElement?.nativeElement); // Available here
+    // The signal's value is available here, or can be read reactively in templates or effects
+    console.log('Projected Element:', this.projectedElement()?.nativeElement);
   }
 }
 ```
@@ -49,134 +66,189 @@ export class MyComponent {
 
 ## What are `viewChild()` and `contentChild()`?
 
-In Angular, components often need to interact with elements or other components/directives rendered within their template or projected into them. The `@ViewChild()` and `@ContentChild()` decorators provide mechanisms to query and get references to these elements or instances.
+Available from Angular 17.1 onwards, `viewChild()` and `contentChild()` are new functional APIs designed to query for elements, components, or directives within an Angular application's template or projected content. Unlike their decorator counterparts (`@ViewChild()` and `@ContentChild()`), these new APIs return reactive Signals, providing improved type safety, consistency, and a more streamlined developer experience, especially in a world moving towards fine-grained reactivity.
 
-### `@ViewChild()`
+### `viewChild()`
 
-- The `@ViewChild()` decorator allows you to query and obtain a reference to the _first_ element or directive matching a selector within the component's _own template_.
-- It's commonly used to access native DOM elements, Angular components, or directives defined directly in the component's `<template>`.
-- The reference obtained is typically available after the component's view has been initialized, specifically within the `ngAfterViewInit` lifecycle hook.
-- You can query by:
-  - A template reference variable (e.g., `#myElement`).
-  - A component type.
-  - A directive type.
+The `viewChild()` function allows you to query for and obtain a reference to the _first_ element, component, or directive matching a selector within the component's _own template_. It's used when a component needs to interact with its internal DOM structure or child components it directly renders.
+
+### How to use `viewChild()`
+
+You call `viewChild()` within the component's class definition, typically as a class property. It returns a `Signal<T | undefined | null>` where `T` is the type of the queried instance (e.g., `ElementRef`, `MyChildComponent`).
 
 ```typescript
-import { Component, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
-import { AnotherComponent } from '../another/another.component'; // Assuming another component exists
+import { Component, ElementRef, AfterViewInit, viewChild } from '@angular/core';
+import { MyButtonComponent } from './my-button/my-button.component'; // Assuming this is a standalone component
 
 @Component({
-  selector: 'app-parent',
+  selector: 'app-parent-view',
   template: `
-    <p #myParagraph>Hello from parent view!</p>
-    <app-another #childComp></app-another>
+    <div #myDivInView>Hello from inside parent view!</div>
+    <app-my-button></app-my-button>
   `,
+  standalone: true,
+  imports: [MyButtonComponent], // Import standalone child component
 })
-export class ParentComponent implements AfterViewInit {
+export class ParentViewComponent implements AfterViewInit {
   // Querying a native DOM element using a template reference variable
-  @ViewChild('myParagraph') paragraphElement!: ElementRef;
+  myDiv = viewChild<ElementRef>('myDivInView');
 
-  // Querying an instance of AnotherComponent
-  @ViewChild('childComp') anotherComponent!: AnotherComponent;
+  // Querying a child component instance by its type
+  myButton = viewChild(MyButtonComponent);
 
   ngAfterViewInit() {
-    // Access the native element
+    // Access the signal's value using the function call syntax
     console.log(
-      'Paragraph text:',
-      this.paragraphElement.nativeElement.textContent
+      'Div element in view:',
+      this.myDiv()?.nativeElement.textContent
     );
-
-    // Call a method on the child component instance
-    this.anotherComponent.someMethod();
+    this.myButton()?.doSomething(); // Call a method on the child component
   }
 }
 ```
 
-### `@ContentChild()`
+The value of the `myDiv` and `myButton` signals will be populated after Angular has initialized the component's view. This typically means the signal's value will be available starting from the `ngAfterViewInit` lifecycle hook, or reactively when read in templates or effects.
 
-- The `@ContentChild()` decorator allows you to query and obtain a reference to the _first_ element or directive matching a selector that is _projected_ into the component using the `<ng-content>` element.
-- This is useful when building components that wrap or enhance external content provided by their parent components.
-- The reference obtained is typically available after the projected content has been initialized, specifically within the `ngAfterContentInit` lifecycle hook.
-- Like `@ViewChild()`, you can query by a template reference variable, component type, or directive type.
+### The `required` option
+
+You can specify the `required: true` option to indicate that the queried element _must_ be present in the view. If it's not found, Angular will throw an error. This is useful for ensuring critical elements are always available. When `required` is `true`, the returned signal type is `Signal<T>` (not `T | undefined | null>`).
+
+```typescript
+import { Component, ElementRef, viewChild } from '@angular/core';
+
+@Component({
+  selector: 'app-required-view-child',
+  template: `
+    <input #requiredInput type="text" placeholder="Required input" />
+  `,
+  standalone: true,
+})
+export class RequiredViewChildComponent {
+  // This signal will always hold an ElementRef, or Angular will throw if not found
+  requiredInputField = viewChild<ElementRef>('requiredInput', {
+    required: true,
+  });
+
+  ngAfterViewInit() {
+    this.requiredInputField().nativeElement.focus(); // No need for null check
+  }
+}
+```
+
+### `contentChild()`
+
+The `contentChild()` function allows you to query for and obtain a reference to the _first_ element, component, or directive that is _projected_ into the component via the `<ng-content>` element. This is useful when building components that act as containers or wrappers, needing to interact with the external content provided by their parent components.
+
+### How to use `contentChild()`
+
+Similar to `viewChild()`, you call `contentChild()` as a class property within the component. It returns a `Signal<T | undefined | null>` where `T` is the type of the queried instance.
 
 ```typescript
 import {
   Component,
-  ContentChild,
   ElementRef,
   AfterContentInit,
+  contentChild,
 } from '@angular/core';
-import { SpecialDirective } from '../special.directive'; // Assuming a directive exists
+import { CardHeaderDirective } from './card-header.directive'; // Assuming this directive exists
 
 @Component({
-  selector: 'app-wrapper',
+  selector: 'app-card',
   template: `
-    <div class="wrapper-styles">
-      <ng-content></ng-content>
-      <!-- Projected content goes here -->
+    <div class="card-container">
+      <ng-content select="[cardHeader]"></ng-content>
+      <div class="card-body">
+        <ng-content></ng-content>
+      </div>
     </div>
   `,
+  standalone: true,
 })
-export class WrapperComponent implements AfterContentInit {
-  // Querying a native DOM element projected into ng-content
-  @ContentChild('projectedDiv') projectedDivElement!: ElementRef;
+export class CardComponent implements AfterContentInit {
+  // Queries for an element with the `cardHeader` directive applied (e.g., <h2 cardHeader>)
+  cardHeader = contentChild(CardHeaderDirective);
 
-  // Querying an instance of SpecialDirective applied to projected content
-  @ContentChild(SpecialDirective) specialDirectiveInstance!: SpecialDirective;
+  // Queries for a native element with a template reference variable '#cardBodyContent'
+  cardBodyContent = contentChild<ElementRef>('cardBodyContent');
 
   ngAfterContentInit() {
-    // Access the projected element
-    console.log('Projected div:', this.projectedDivElement?.nativeElement);
-
-    // Check if the directive was found on projected content
-    if (this.specialDirectiveInstance) {
-      console.log('SpecialDirective found on projected content');
+    // Access the signal's value using the function call syntax
+    if (this.cardHeader()) {
+      console.log('Card header directive found on projected content.');
     }
+    console.log(
+      'Projected body content:',
+      this.cardBodyContent()?.nativeElement.textContent
+    );
   }
 }
 ```
 
 ```html
-<!-- Usage of WrapperComponent -->
-<app-wrapper>
-  <!-- This div is projected into app-wrapper's <ng-content> -->
-  <div #projectedDiv appSpecial>This content is wrapped.</div>
-</app-wrapper>
+<!-- Usage of CardComponent -->
+<app-card>
+  <h2 cardHeader>Welcome to My Card</h2>
+  <div #cardBodyContent>This is the main content of the card.</div>
+  <p>More projected content.</p>
+</app-card>
+```
+
+The value of the `cardHeader` and `cardBodyContent` signals will be populated after Angular has initialized the projected content. This typically means the signal's value will be available starting from the `ngAfterContentInit` lifecycle hook, or reactively when read in templates or effects.
+
+### The `required` option
+
+Similar to `viewChild()`, `contentChild()` also supports the `required: true` option. If the projected content matching the query is not found and `required` is `true`, Angular will throw an error.
+
+```typescript
+import { Component, contentChild, ElementRef } from '@angular/core';
+
+@Component({
+  selector: 'app-strict-container',
+  template: ` <ng-content select=".main-content"></ng-content> `,
+  standalone: true,
+})
+export class StrictContainerComponent {
+  // Requires a projected element with class 'main-content'
+  mainContent = contentChild<ElementRef>('.main-content', { required: true });
+
+  ngAfterContentInit() {
+    this.mainContent().nativeElement.style.border = '2px solid blue';
+  }
+}
 ```
 
 ## Key Differences
 
-The fundamental difference lies in _where_ they look for the element or directive:
+The fundamental differences between `viewChild()` and `contentChild()` lie in _where_ they perform the query, _when_ their resulting signals are populated, and how they contribute to Angular's new reactivity model.
 
 ### Query Location
 
-- **`@ViewChild()`**: Queries elements/directives _within the component's own template_ (`<template>`). These are elements the component itself defines and renders.
-- **`@ContentChild()`**: Queries elements/directives that are _projected into_ the component from a parent component using `<ng-content>`. These elements are defined by the parent but rendered by the child.
+- **`viewChild()`**: Queries elements/directives strictly _within the component's own template_. These are elements the component itself declares and renders as part of its view.
+- **`contentChild()`**: Queries elements/directives that are _projected into_ the component from a parent component using the `<ng-content>` element. These elements are defined by the parent but are rendered inside the child's `<ng-content>` slot.
 
 ### Availability Timing
 
-- **`@ViewChild()`**: The queried element/component is available after the component's _view_ has been initialized. Access it in `ngAfterViewInit`.
-- **`@ContentChild()`**: The queried element/component is available after the _projected content_ has been initialized. Access it in `ngAfterContentInit`.
+Both `viewChild()` and `contentChild()` return Signals, meaning their values are reactive and will update as the queried element becomes available or changes.
+
+- **`viewChild()`**: The signal's value typically resolves and becomes available after the component's _view_ has been initialized. This corresponds to the `ngAfterViewInit` lifecycle hook. If you read the signal in the component's template or an `effect`, it will automatically react to its value being set.
+- **`contentChild()`**: The signal's value typically resolves and becomes available after the _projected content_ has been initialized. This corresponds to the `ngAfterContentInit` lifecycle hook. Similarly, reading this signal in templates or effects will provide reactivity.
+
+### Reactivity and Signals
+
+A major distinction from the older decorator-based queries is that `viewChild()` and `contentChild()` return **Signals**. This means:
+
+- **Automatic Updates**: If the queried element appears (e.g., due to an `*ngIf` becoming true) or disappears, the signal's value will automatically update (from `undefined` to the instance, or vice-versa), triggering change detection for any part of your template or any `effect` that reads that signal.
+- **No `static` Option**: The functional APIs do not have a `static` option. They inherently behave dynamically, similar to how `@ViewChild({ static: false })` and `@ContentChild({ static: false })` worked, resolving the query after the relevant view/content initialization. This simplifies the API and aligns with the reactive nature.
+- **Improved Type Safety**: By explicitly returning `Signal<T | undefined | null>` (or `Signal<T>` with `required: true`), these APIs offer better type inference and enforce safer access to the queried instance.
 
 ### Use Cases
 
-- **`@ViewChild()`**: Useful for interacting with elements or child components that are a direct part of the component's internal structure and rendering logic. Examples: accessing a form input for focus, calling a method on a child component instance rendered in the template, getting dimensions of a DOM element in the view.
-- **`@ContentChild()`**: Useful for building flexible container or wrapper components that need to interact with the content provided by their users. Examples: building a tab component that queries for `Tab` components projected inside it, creating a modal that queries for header/body/footer sections provided as content.
-
-### `static` Option
-
-Both decorators accept a `static` option (available from Angular 8 onwards).
-
-- `@ViewChild('selector', { static: boolean })`
-- `@ContentChild('selector', { static: boolean })`
-
-- **`static: true`**: The query is resolved _once_ before the first change detection run. The element must exist in the template _conditionally or unconditionally_ at the time of the first change detection. If the element is inside an `*ngIf` that is initially false, it won't be found. Use this if you need to access the element in `ngOnInit`.
-- **`static: false` (Default)**: The query is resolved _after_ change detection runs. The element is guaranteed to be available in `ngAfterViewInit` (for `ViewChild`) or `ngAfterContentInit` (for `ContentChild`). Use this if the element might be added or removed conditionally (e.g., with `*ngIf`) or if you only need access after the view/content is fully initialized.
-
-For most common scenarios where you interact with the element after it's rendered, `static: false` (the default) is appropriate and safer, accessed in `ngAfterViewInit` or `ngAfterContentInit`.
+- **`viewChild()`**: Ideal for direct manipulation of the component's own rendered DOM (e.g., setting focus on an input after initialization), interacting with child components it owns (e.g., calling a method on a child), or getting measurements of elements that are part of its fixed structure.
+- **`contentChild()`**: Perfect for creating flexible, reusable container components that need to introspect or interact with the content provided by their users. This enables patterns like custom form controls that inspect projected inputs, or layout components that organize projected sections (e.g., a tab component reading projected `<app-tab-panel>` components).
 
 ## Further reading
 
-- [Angular Documentation: ViewChild](https://angular.dev/api/core/ViewChild)
-- [Angular Documentation: ContentChild](https://angular.dev/api/core/ContentChild)
-- [Angular Documentation: Lifecycle Hooks (explains AfterViewInit and AfterContentInit)](https://angular.dev/guide/components/lifecycle#afterviewinit)
+- [Angular Documentation: `viewChild` and `viewChildren` (functional queries)](https://angular.dev/api/core/viewChild)
+- [Angular Documentation: `contentChild` and `contentChildren` (functional queries)](https://angular.dev/api/core/contentChild)
+- [Angular Documentation: Signals](https://angular.dev/guide/signals)
+- [Angular Documentation: Lifecycle Hooks (specifically `AfterViewInit` and `AfterContentInit`)](https://angular.dev/guide/components/lifecycle#afterviewinit)

@@ -844,19 +844,23 @@ Curated top Angular interview questions with high quality answers for acing your
 
     <!-- Update here: /questions/what-are-viewchild-and-contentchild/en-US.mdx -->
 
-    `viewChild()` and `contentChild()` are decorators used in Angular components to query elements or directives from the component's template or projected content.
+    `viewChild()` and `contentChild()` are functions (APIs) introduced in Angular that provide a modern, functional, and signal-based way to query elements or directives from a component's template or projected content. They are available from Angular 17.1 onwards.
 
-    - `viewChild()` queries elements or directives _within the component's own template_. It's typically available after the `AfterViewInit` lifecycle hook.
-    - `contentChild()` queries elements or directives that are _projected into the component_ using `<ng-content>`. It's typically available after the `AfterContentInit` lifecycle hook.
+    - `viewChild()` queries for the _first_ element or directive within the **component's own template**. It returns a `Signal` that will emit the queried instance (or `undefined`/`null`) after the view is initialized.
+    - `contentChild()` queries for the _first_ element or directive that is **projected into the component** via `<ng-content>`. It also returns a `Signal` that will emit the queried instance after the projected content is initialized.
 
-    The core difference is _where_ they look: `viewChild` looks inside the component's `<template>`, while `contentChild` looks inside the `<ng-content>` slot where parent components place content.
+    The core difference is their lookup scope: `viewChild()` looks inside the component's internal view, while `contentChild()` looks within the content provided by a parent component through content projection. Both return reactive Signals, making their values automatically update when the queried element appears or disappears.
 
     ```typescript
     import {
       Component,
-      ViewChild,
       ElementRef,
-      ContentChild,
+      AfterViewInit,
+      AfterContentInit,
+      viewChild,
+      contentChild,
+      signal,
+      computed,
     } from '@angular/core';
 
     @Component({
@@ -864,21 +868,32 @@ Curated top Angular interview questions with high quality answers for acing your
       template: `
         <p #myViewElement>This is part of the component's view.</p>
         <ng-content></ng-content>
+        @if (viewElement()) {
+        <p>View element is present!</p>
+        } @if (projectedElement()) {
+        <p>Projected element is present!</p>
+        }
       `,
+      standalone: true,
     })
-    export class MyComponent {
+    export class MyComponent implements AfterViewInit, AfterContentInit {
       // Queries the <p> tag within this component's template
-      @ViewChild('myViewElement') viewElement!: ElementRef;
+      viewElement = viewChild<ElementRef>('myViewElement');
 
       // Queries an element projected into <ng-content>
-      @ContentChild('myProjectedElement') projectedElement!: ElementRef;
+      projectedElement = contentChild<ElementRef>('myProjectedElement');
 
       ngAfterViewInit() {
-        console.log('View Element:', this.viewElement?.nativeElement); // Available here
+        // The signal's value is available here, or can be read reactively in templates or effects
+        console.log('View Element:', this.viewElement()?.nativeElement);
       }
 
       ngAfterContentInit() {
-        console.log('Projected Element:', this.projectedElement?.nativeElement); // Available here
+        // The signal's value is available here, or can be read reactively in templates or effects
+        console.log(
+          'Projected Element:',
+          this.projectedElement()?.nativeElement
+        );
       }
     }
     ```
@@ -1704,13 +1719,15 @@ Curated top Angular interview questions with high quality answers for acing your
 
     <!-- Update here: /questions/how-do-you-manually-trigger-change-detection/en-US.mdx -->
 
-    You might need to manually trigger change detection in Angular, especially when using the `OnPush` change detection strategy or when working outside of Angular's Zone.js environment (like with Web Workers or certain third-party libraries).
+    You might need to manually trigger change detection in Angular, especially when using the `OnPush` change detection strategy or when working outside of Angular's default Zone.js environment (like with Web Workers or certain third-party libraries).
 
     The primary ways to manually trigger change detection are:
 
-    - `ChangeDetectorRef.detectChanges()`: Runs change detection for the current component and its descendants. Use this when you know a change has occurred within the component's view or its children that Angular might not otherwise detect.
-    - `ChangeDetectorRef.markForCheck()`: Marks the component and its ancestors as needing to be checked during the _next_ change detection cycle. It doesn't trigger the check immediately. This is the preferred method when using `OnPush`, as it efficiently signals Angular that a relevant input or observable has emitted, ensuring the component is checked during the next global tick.
-    - `ApplicationRef.tick()`: Triggers change detection for the _entire_ application. This is less common for component-specific updates and more for global scenarios or testing.
+    - `ChangeDetectorRef.detectChanges()`: Runs change detection for the current component and its descendants. Use this when you know a change has occurred within the component's view or its children that Angular might not otherwise detect, especially after detaching a component
+
+    - `ChangeDetectorRef.markForCheck()`: Marks the component and its ancestors as needing to be checked during the _next_ change detection cycle. It doesn't trigger the check immediately. This is the preferred method when using `OnPush`, as it efficiently signals Angular that a relevant input or observable has emitted, ensuring the component is checked during the next global tick
+
+    - `ApplicationRef.tick()`: Triggers change detection for the _entire_ application. This is less common for component-specific updates and more for global scenarios or testing
 
     ```typescript
     import {
@@ -1718,19 +1735,22 @@ Curated top Angular interview questions with high quality answers for acing your
       ChangeDetectorRef,
       ChangeDetectionStrategy,
       ApplicationRef,
+      signal, // Available from Angular 16 onwards
     } from '@angular/core';
 
     @Component({
       selector: 'app-my-component',
       template: `
-        <p>{{ message }}</p>
+        <p>{{ message() }}</p>
         <button (click)="updateMessage()">Update Message (Manual CD)</button>
       `,
       // Often used with OnPush strategy
       changeDetection: ChangeDetectionStrategy.OnPush,
+      standalone: true, // Example with standalone component
     })
     export class MyComponent {
-      message = 'Initial message';
+      // Using Signals for reactivity (Available from Angular 16 onwards)
+      message = signal('Initial message');
 
       constructor(
         private cdr: ChangeDetectorRef,
@@ -1738,17 +1758,24 @@ Curated top Angular interview questions with high quality answers for acing your
       ) {}
 
       updateMessage() {
-        // Example: Updating data outside Zone.js or when using OnPush
-        this.message = 'Message updated at ' + new Date().toLocaleTimeString();
+        // Update the signal. With OnPush, if `message` was a regular property,
+        // we'd need manual CD. With Signals, it often handles itself, but manual CD
+        // might still be useful for edge cases or non-signal changes.
+        this.message.set(
+          'Message updated at ' + new Date().toLocaleTimeString()
+        );
 
         // Choose one method depending on the scenario:
 
         // Method 1: Trigger change detection for this component and its children
-        this.cdr.detectChanges();
+        // Useful if the component's change detector was detached or for immediate updates.
+        // this.cdr.detectChanges();
 
         // Method 2: Mark this component and ancestors for check (common with OnPush)
-        // This is usually sufficient and more performant than detectChanges()
-        // this.cdr.markForCheck();
+        // This is usually sufficient and more performant than detectChanges() when using OnPush.
+        // This example uses a signal, which will automatically mark the component dirty when read in template.
+        // However, if `message` was a regular property, `markForCheck()` would be crucial.
+        this.cdr.markForCheck();
 
         // Method 3: Trigger change detection for the entire application
         // this.appRef.tick();
@@ -1842,9 +1869,7 @@ Curated top Angular interview questions with high quality answers for acing your
 
     <!-- Update here: /questions/how-to-use-httpclient-example/en-US.mdx -->
 
-    `HttpClient` is Angular's built-in service for making HTTP requests to fetch data from or send data to a backend server. You use it by importing `HttpClientModule` into your application's root or feature module and then injecting the `HttpClient` service into your components or services.
-
-    Here's a quick example of making a GET request:
+    The Angular HttpClient is used to make HTTP requests to backend servers. First, import `HttpClientModule` in your `app.config.ts` or `app.module.ts` (depending on whether you're using standalone components or modules). Then, inject `HttpClient` into your component or service. Use methods like `get()`, `post()`, `put()`, `delete()` to make requests. Subscribe to the returned `Observable` to handle the response.
 
     ```typescript
     import { HttpClient } from '@angular/common/http';
@@ -1854,44 +1879,47 @@ Curated top Angular interview questions with high quality answers for acing your
       providedIn: 'root',
     })
     export class DataService {
-      private apiUrl = 'https://api.example.com/items'; // Replace with your API endpoint
+      private apiUrl = 'https://jsonplaceholder.typicode.com/todos';
 
       constructor(private http: HttpClient) {}
 
-      getItems() {
-        return this.http.get<any[]>(this.apiUrl); // Returns an Observable
+      getData() {
+        return this.http.get(this.apiUrl);
       }
     }
     ```
-
-    In a component, you would inject the `DataService` and subscribe to the observable returned by `getItems()` to get the data:
 
     ```typescript
     import { Component, OnInit } from '@angular/core';
     import { DataService } from './data.service';
 
     @Component({
-      selector: 'app-item-list',
+      selector: 'app-my-component',
       template: `
         <ul>
-          <li *ngFor="let item of items">{{ item.name }}</li>
+          <li *ngFor="let item of data">{{ item.title }}</li>
         </ul>
       `,
+      standalone: true, // Assuming standalone for modern Angular context
+      providers: [DataService], // Provide the service if component is standalone
     })
-    export class ItemListComponent implements OnInit {
-      items: any[] = [];
+    export class MyComponent implements OnInit {
+      data: any[] = [];
 
       constructor(private dataService: DataService) {}
 
       ngOnInit() {
-        this.dataService.getItems().subscribe(data => {
-          this.items = data;
-        });
+        this.dataService.getData().subscribe(
+          (response: any) => {
+            this.data = response;
+          },
+          error => {
+            console.error('Error fetching data:', error);
+          }
+        );
       }
     }
     ```
-
-    `HttpClient` methods return Observables, which you must subscribe to in order to initiate the request and receive the response. It also provides features for error handling, request and response interception, and more.
 
     <!-- Update here: /questions/how-to-use-httpclient-example/en-US.mdx -->
 
