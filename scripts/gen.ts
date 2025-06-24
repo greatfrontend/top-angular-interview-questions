@@ -123,9 +123,7 @@ ${qn.content
 
     <br>
 
-    > Read the [detailed answer](${
-      qn.href
-    }) on [GreatFrontEnd](https://www.greatfrontend.com/) which allows progress tracking, contains more code samples, and useful resources.
+    > Try out [Angular coding questions](https://www.greatfrontend.com/questions/angular-interview-questions) on [GreatFrontEnd](https://www.greatfrontend.com/).
 
     [Back to top ↑](#table-of-contents)
     <br>
