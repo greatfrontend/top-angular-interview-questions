@@ -2,6 +2,8 @@
 
 Curated top Angular interview questions with high quality answers for acing your front end interviews.
 
+Thanks to [Michal Grzegorczyk](https://www.linkedin.com/in/michalgrzegorczyk-dev/) for feedback and proofreading.
+
 ## Table of Contents
 
 <!-- TABLE_OF_CONTENTS:START -->
