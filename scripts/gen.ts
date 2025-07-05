@@ -123,7 +123,7 @@ ${qn.content
 
     <br>
 
-    > Try out [Angular coding questions](https://www.greatfrontend.com/questions/angular-interview-questions) on [GreatFrontEnd](https://www.greatfrontend.com/).
+    > Try out [Angular coding questions](https://www.greatfrontend.com/questions/angular-interview-questions?gnrs=github) on [GreatFrontEnd](https://www.greatfrontend.com/).
 
     [Back to top ↑](#table-of-contents)
     <br>
